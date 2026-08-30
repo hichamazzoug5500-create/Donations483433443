@@ -125,10 +125,10 @@ export const MapView = ({ requests = [], onSelectRequest, selectedRequestId = nu
                   {onSelectRequest && (
                     <button
                       onClick={() => onSelectRequest(req)}
-                      className="w-full mt-2 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs py-1.5 px-3 rounded shadow-sm flex items-center justify-center gap-1 transition-colors"
+                      className="w-full mt-2 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs py-1.5 px-3 rounded-lg shadow-xs flex items-center justify-center gap-1 transition-colors"
                     >
                       <PhoneCall className="w-3 h-3" />
-                      <span>{t('helpContactBtn')}</span>
+                      <span>{t('viewAndPledge')}</span>
                     </button>
                   )}
                 </div>

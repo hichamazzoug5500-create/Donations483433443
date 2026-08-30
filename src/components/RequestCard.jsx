@@ -12,7 +12,7 @@ import {
   Edit2,
   Building2,
   PackageCheck,
-  PhoneCall
+  PieChart
 } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
@@ -23,7 +23,7 @@ export const RequestCard = ({
   onToggleStatus, 
   isOwner = false 
 }) => {
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
 
   const CATEGORY_MAP = {
     food: { label: t('catFood'), icon: Utensils, color: 'bg-emerald-50 text-emerald-900 border-emerald-200' },
@@ -34,16 +34,16 @@ export const RequestCard = ({
   };
 
   const URGENCY_MAP = {
-    high: { label: 'حالة عاجلة', color: 'bg-red-600 text-white' },
-    medium: { label: 'خلال أيام', color: 'bg-amber-600 text-white' },
-    low: { label: 'مستمر', color: 'bg-slate-600 text-white' }
+    high: { label: t('urgencyHigh'), color: 'bg-red-600 text-white' },
+    medium: { label: t('urgencyMedium'), color: 'bg-amber-600 text-white' },
+    low: { label: t('urgencyLow'), color: 'bg-slate-600 text-white' }
   };
 
   const categoryMeta = CATEGORY_MAP[request.category] || CATEGORY_MAP.other;
   const CategoryIcon = categoryMeta.icon;
   const urgencyMeta = URGENCY_MAP[request.urgency] || URGENCY_MAP.medium;
 
-  const formattedDate = new Date(request.createdAt).toLocaleDateString('ar-DZ', {
+  const formattedDate = new Date(request.createdAt).toLocaleDateString(lang === 'ar' ? 'ar-DZ' : 'en-US', {
     month: 'short',
     day: 'numeric'
   });
@@ -54,16 +54,27 @@ export const RequestCard = ({
         ? 'border-slate-200 bg-slate-50/70 opacity-75' 
         : request.status === 'in_progress'
         ? 'border-amber-300 bg-amber-50/15'
+        : request.remainingQuantity
+        ? 'border-amber-300/80 bg-amber-50/10 hover:border-amber-500'
         : 'border-slate-200/90 hover:border-emerald-700'
     }`}>
       <div className="p-4 sm:p-5 space-y-3">
         
         {/* Top Badges Bar */}
-        <div className="flex items-center justify-between gap-2">
-          <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${categoryMeta.color}`}>
-            <CategoryIcon className="w-3.5 h-3.5" />
-            <span>{categoryMeta.label}</span>
-          </span>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold border ${categoryMeta.color}`}>
+              <CategoryIcon className="w-3.5 h-3.5" />
+              <span>{categoryMeta.label}</span>
+            </span>
+
+            {request.remainingQuantity && (
+              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300">
+                <PieChart className="w-3 h-3 text-amber-600" />
+                <span>{t('partialAidBadge')}</span>
+              </span>
+            )}
+          </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
             <span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${urgencyMeta.color}`}>
@@ -73,14 +84,14 @@ export const RequestCard = ({
             {request.status === 'in_progress' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-900 border border-amber-300">
                 <PackageCheck className="w-3 h-3 text-amber-600" />
-                <span>قيد التكفل</span>
+                <span>{t('statusInProgress')}</span>
               </span>
             )}
 
             {request.status === 'fulfilled' && (
               <span className="inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-900">
                 <CheckCircle className="w-3 h-3 text-emerald-700" />
-                <span>مكتمل</span>
+                <span>{t('statusFulfilled')}</span>
               </span>
             )}
           </div>
@@ -95,7 +106,7 @@ export const RequestCard = ({
           
           <div className="flex items-center gap-1.5 text-xs text-slate-500 mt-1">
             <MapPin className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-            <span className="font-bold text-slate-700">{request.location?.city || 'الجزائر'}</span>
+            <span className="font-bold text-slate-700">{request.location?.city || 'Algeria'}</span>
             {request.location?.address && (
               <span className="truncate max-w-[180px] sm:max-w-[240px] text-slate-400">
                 • {request.location.address}
@@ -104,21 +115,33 @@ export const RequestCard = ({
           </div>
         </div>
 
-        {/* Need description with high Arabic legibility */}
+        {/* Need description */}
         <p className="text-slate-600 text-xs sm:text-sm line-clamp-3 leading-relaxed">
           {request.needDescription}
         </p>
 
-        {/* Quantity scope if provided */}
-        {request.quantity && (
-          <div className="bg-slate-50 rounded-xl p-2 sm:p-2.5 text-xs text-slate-800 font-medium border border-slate-200/70 flex items-center justify-between">
-            <span className="text-slate-500 font-normal">الكمية المطلوبة:</span>
-            <span className="font-bold text-emerald-900">{request.quantity}</span>
-          </div>
-        )}
+        {/* Quantity scope & Remaining Needed */}
+        <div className="space-y-1.5">
+          {request.quantity && (
+            <div className="bg-slate-50 rounded-xl p-2 sm:p-2.5 text-xs text-slate-800 font-medium border border-slate-200/70 flex items-center justify-between">
+              <span className="text-slate-500 font-normal">{t('quantityNeeded')}</span>
+              <span className="font-bold text-emerald-900">{request.quantity}</span>
+            </div>
+          )}
+
+          {request.remainingQuantity && (
+            <div className="bg-amber-50 rounded-xl p-2 sm:p-2.5 text-xs text-amber-950 font-bold border border-amber-300 flex items-center justify-between">
+              <span className="text-amber-800 font-medium flex items-center gap-1">
+                <PieChart className="w-3.5 h-3.5 text-amber-600" />
+                <span>{t('remainingNeededTag')}</span>
+              </span>
+              <span className="text-amber-900 font-extrabold">{request.remainingQuantity}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Card Footer with full tap target size */}
+      {/* Card Footer */}
       <div className="px-4 sm:px-5 py-3 bg-slate-50/80 border-t border-slate-100 flex items-center justify-between gap-3 text-xs">
         <span className="text-slate-400 flex items-center gap-1 text-[11px]">
           <Clock className="w-3 h-3" />
@@ -133,7 +156,7 @@ export const RequestCard = ({
                 <button
                   onClick={() => onEdit(request)}
                   className="p-2 text-slate-600 hover:text-emerald-800 hover:bg-white rounded-lg transition-colors min-h-[38px] min-w-[38px] flex items-center justify-center"
-                  title="تعديل الطلب"
+                  title={t('editRequestBtn')}
                 >
                   <Edit2 className="w-4 h-4" />
                 </button>
@@ -147,7 +170,7 @@ export const RequestCard = ({
                       : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
                   }`}
                 >
-                  {request.status === 'open' ? 'تعليم كمكتمل' : 'إعادة فتح'}
+                  {request.status === 'open' ? t('markFulfilledBtn') : t('reopenRequestBtn')}
                 </button>
               )}
             </>
@@ -157,7 +180,7 @@ export const RequestCard = ({
               className="flex items-center justify-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold px-4 py-2 rounded-xl shadow-xs transition-all text-xs min-h-[40px]"
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>استعراض والتكفل</span>
+              <span>{t('viewAndPledge')}</span>
             </button>
           )}
         </div>

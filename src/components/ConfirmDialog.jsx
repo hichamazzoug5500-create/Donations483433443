@@ -1,17 +1,19 @@
 import React from 'react';
 import { AlertTriangle, HelpCircle, X } from 'lucide-react';
+import { useLanguage } from '../context/LanguageContext';
 
 export const ConfirmDialog = ({
   isOpen,
   title,
   message,
-  confirmLabel = 'تأكيد',
-  cancelLabel = 'إلغاء',
+  confirmLabel,
+  cancelLabel,
   isDestructive = false,
   isLoading = false,
   onConfirm,
   onCancel
 }) => {
+  const { t } = useLanguage();
   if (!isOpen) return null;
 
   return (
@@ -20,7 +22,7 @@ export const ConfirmDialog = ({
         
         <div className="flex items-start gap-3.5">
           <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
-            isDestructive ? 'bg-red-100 text-red-600 ring-4 ring-red-50' : 'bg-teal-100 text-teal-700 ring-4 ring-teal-50'
+            isDestructive ? 'bg-red-100 text-red-600 ring-4 ring-red-50' : 'bg-emerald-100 text-emerald-800 ring-4 ring-emerald-50'
           }`}>
             {isDestructive ? <AlertTriangle className="w-5 h-5" /> : <HelpCircle className="w-5 h-5" />}
           </div>
@@ -46,7 +48,7 @@ export const ConfirmDialog = ({
             disabled={isLoading}
             className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs min-h-[42px] transition-colors"
           >
-            {cancelLabel}
+            {cancelLabel || t('cancelBtn')}
           </button>
 
           <button
@@ -56,10 +58,10 @@ export const ConfirmDialog = ({
             className={`px-5 py-2.5 font-bold rounded-xl text-xs text-white shadow-md transition-all active:scale-95 min-h-[42px] flex items-center gap-1.5 ${
               isDestructive
                 ? 'bg-red-600 hover:bg-red-700'
-                : 'bg-teal-600 hover:bg-teal-700'
+                : 'bg-emerald-800 hover:bg-emerald-900'
             }`}
           >
-            {isLoading ? '...' : confirmLabel}
+            {isLoading ? '...' : (confirmLabel || t('confirmBtn'))}
           </button>
         </div>
 

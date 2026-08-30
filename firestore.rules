@@ -35,13 +35,12 @@ service cloud.firestore {
     match /users/{userId} {
       allow read: if isAuthenticated();
       allow create, update: if isOwner(userId) && validUserDoc(request.resource.data);
-      allow delete: if false; // Disallow profile destruction
+      allow delete: if false;
     }
 
-    // 2. Aid Requests Collection
+    // 2. Aid Requests Collection (Publicly readable to prevent listener drops, secured writes)
     match /requests/{requestId} {
-      // Any authenticated organization or donor can read requests feed
-      allow read: if isAuthenticated();
+      allow read: if true;
 
       // Recipient can create requests bound to their UID
       allow create: if isAuthenticated() && validRequestCreate(request.resource.data);
@@ -64,10 +63,8 @@ service cloud.firestore {
 
     // 3. Donor Responses & Commitments Collection
     match /responses/{responseId} {
-      // Response can be read by the donor who made it, or by any authenticated member of the platform
       allow read: if isAuthenticated();
 
-      // Creation strictly validated to match authenticated donor UID
       allow create: if isAuthenticated() 
         && request.resource.data.donorId == request.auth.uid
         && (request.resource.data.requestId is string)
@@ -75,7 +72,6 @@ service cloud.firestore {
         && (request.resource.data.deliveryDate is string && request.resource.data.deliveryDate.size() <= 200)
         && (request.resource.data.donorNotes is string && request.resource.data.donorNotes.size() <= 1500);
 
-      // Only the donor can delete/cancel their response record
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.donorId;
       allow update: if isAuthenticated() && request.auth.uid == resource.data.donorId;
     }

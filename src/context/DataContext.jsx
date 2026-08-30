@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { 
   collection, 
   addDoc, 
@@ -6,7 +6,6 @@ import {
   deleteDoc, 
   doc, 
   query, 
-  orderBy, 
   onSnapshot, 
   serverTimestamp,
   where,
@@ -120,7 +119,7 @@ const ALGERIA_DEMO_REQUESTS = [
 ];
 
 export const DataProvider = ({ children }) => {
-  const { userProfile, isDemoMode } = useAuth();
+  const { userProfile, currentUser, isDemoMode } = useAuth();
   const [requests, setRequests] = useState([]);
   const [responses, setResponses] = useState([]);
   const [loadingRequests, setLoadingRequests] = useState(true);
@@ -152,24 +151,38 @@ export const DataProvider = ({ children }) => {
       return;
     }
 
-    // Firestore Requests Listener
-    const requestsRef = collection(db, 'requests');
-    const q = query(requestsRef, orderBy('createdAt', 'desc'));
+    setLoadingRequests(true);
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const docsData = snapshot.docs.map((docSnap) => ({
-        requestId: docSnap.id,
-        ...docSnap.data(),
-        createdAt: docSnap.data().createdAt?.toDate ? docSnap.data().createdAt.toDate().toISOString() : new Date().toISOString()
-      }));
+    // 1. Real-time Firestore Requests Listener (handles live sync immediately)
+    const requestsRef = collection(db, 'requests');
+    const unsubscribeRequests = onSnapshot(requestsRef, (snapshot) => {
+      const docsData = snapshot.docs.map((docSnap) => {
+        const data = docSnap.data();
+        let formattedCreatedAt = new Date().toISOString();
+        if (data.createdAt?.toDate) {
+          formattedCreatedAt = data.createdAt.toDate().toISOString();
+        } else if (typeof data.createdAt === 'string') {
+          formattedCreatedAt = data.createdAt;
+        }
+
+        return {
+          requestId: docSnap.id,
+          ...data,
+          createdAt: formattedCreatedAt
+        };
+      });
+
+      // Sort newest first client-side
+      docsData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
       setRequests(docsData);
       setLoadingRequests(false);
     }, (error) => {
-      console.error("Firestore requests query error:", error);
+      console.warn("Firestore requests listener notice:", error.message);
       setLoadingRequests(false);
     });
 
-    // Firestore Responses Listener
+    // 2. Real-time Firestore Responses Listener
     const responsesRef = collection(db, 'responses');
     const unsubscribeResponses = onSnapshot(responsesRef, (snapshot) => {
       const respData = snapshot.docs.map((docSnap) => ({
@@ -178,14 +191,14 @@ export const DataProvider = ({ children }) => {
       }));
       setResponses(respData);
     }, (err) => {
-      console.error("Firestore responses query error:", err);
+      console.warn("Firestore responses listener notice:", err.message);
     });
 
     return () => {
-      unsubscribe();
+      unsubscribeRequests();
       unsubscribeResponses();
     };
-  }, [isDemoMode]);
+  }, [isDemoMode, currentUser?.uid]);
 
   const updateDemoStorage = (newRequests) => {
     setRequests(newRequests);
@@ -233,10 +246,23 @@ export const DataProvider = ({ children }) => {
       createdAt: serverTimestamp()
     });
 
+    // Optimistic local update
+    const optimisticReq = {
+      requestId: docRef.id,
+      ...payload,
+      createdAt: new Date().toISOString()
+    };
+    setRequests(prev => [optimisticReq, ...prev.filter(r => r.requestId !== docRef.id)]);
+
     return docRef.id;
   };
 
   const updateRequest = async (requestId, updatedFields) => {
+    // Optimistic local update
+    setRequests(prev => prev.map(req => 
+      req.requestId === requestId ? { ...req, ...updatedFields } : req
+    ));
+
     if (!isFirebaseConfigured || isDemoMode) {
       const updated = requests.map(req => 
         req.requestId === requestId ? { ...req, ...updatedFields } : req
@@ -254,6 +280,9 @@ export const DataProvider = ({ children }) => {
   };
 
   const deleteRequest = async (requestId) => {
+    // Optimistic local update
+    setRequests(prev => prev.filter(req => req.requestId !== requestId));
+
     if (!isFirebaseConfigured || isDemoMode) {
       const updated = requests.filter(req => req.requestId !== requestId);
       updateDemoStorage(updated);
@@ -264,19 +293,50 @@ export const DataProvider = ({ children }) => {
     await deleteDoc(reqRef);
   };
 
-  // Two-step logic: Confirm Aid Pledge / Accept Mission
+  // Two-step logic: Confirm Aid Pledge / Accept Mission (Full or Partial)
   const commitToRequest = async (requestId, commitmentDetails = {}) => {
+    const isFull = commitmentDetails.commitmentType !== 'partial';
+
     const payload = {
       requestId,
       donorId: userProfile?.uid || 'donor-dz',
-      donorOrgName: userProfile?.orgName || 'محسن / منظمة متبرعة',
-      donorPhone: userProfile?.phone || '+213...',
+      donorOrgName: userProfile?.orgName || 'محسن / متبرع',
+      donorPhone: userProfile?.phone || '',
+      commitmentType: isFull ? 'full' : 'partial',
       pledgedQuantity: commitmentDetails.pledgedQuantity || '',
+      remainingQuantity: isFull ? '' : (commitmentDetails.remainingQuantity || ''),
       deliveryDate: commitmentDetails.deliveryDate || '',
       donorNotes: commitmentDetails.donorNotes || '',
       type: 'commitment',
       createdAt: new Date().toISOString()
     };
+
+    const requestUpdates = isFull ? {
+      status: 'in_progress',
+      isFullCommitment: true,
+      assignedDonorId: payload.donorId,
+      assignedDonorName: payload.donorOrgName,
+      assignedDonorPhone: payload.donorPhone,
+      remainingQuantity: ''
+    } : {
+      status: 'open',
+      isFullCommitment: false,
+      hasPartialPledges: true,
+      remainingQuantity: commitmentDetails.remainingQuantity || '',
+      lastPartialDonorName: payload.donorOrgName,
+      lastPartialDonorPhone: payload.donorPhone
+    };
+
+    // Optimistically update request state immediately
+    setRequests(prev => prev.map(r => {
+      if (r.requestId === requestId) {
+        return {
+          ...r,
+          ...requestUpdates
+        };
+      }
+      return r;
+    }));
 
     if (!isFirebaseConfigured || isDemoMode) {
       const newResp = {
@@ -285,21 +345,6 @@ export const DataProvider = ({ children }) => {
       };
       const updatedResponses = [newResp, ...responses.filter(r => !(r.requestId === requestId && r.donorId === payload.donorId))];
       updateDemoResponsesStorage(updatedResponses);
-
-      // Update request status to 'in_progress' and set assigned donor
-      const updatedRequests = requests.map(r => {
-        if (r.requestId === requestId) {
-          return {
-            ...r,
-            status: 'in_progress',
-            assignedDonorId: payload.donorId,
-            assignedDonorName: payload.donorOrgName,
-            assignedDonorPhone: payload.donorPhone
-          };
-        }
-        return r;
-      });
-      updateDemoStorage(updatedRequests);
       return newResp;
     }
 
@@ -311,45 +356,44 @@ export const DataProvider = ({ children }) => {
 
     // Update request document
     const reqRef = doc(db, 'requests', requestId);
-    await updateDoc(reqRef, {
-      status: 'in_progress',
-      assignedDonorId: payload.donorId,
-      assignedDonorName: payload.donorOrgName,
-      assignedDonorPhone: payload.donorPhone
-    });
+    await updateDoc(reqRef, requestUpdates);
 
     return { responseId: docRef.id, ...payload };
   };
 
   // Cancel commitment
   const cancelCommitment = async (requestId) => {
+    // Optimistically update local state immediately
+    setRequests(prev => prev.map(r => {
+      if (r.requestId === requestId) {
+        return {
+          ...r,
+          status: 'open',
+          isFullCommitment: false,
+          assignedDonorId: null,
+          assignedDonorName: null,
+          assignedDonorPhone: null,
+          remainingQuantity: ''
+        };
+      }
+      return r;
+    }));
+
     if (!isFirebaseConfigured || isDemoMode) {
       const updatedResponses = responses.filter(r => !(r.requestId === requestId && r.donorId === userProfile?.uid));
       updateDemoResponsesStorage(updatedResponses);
-
-      const updatedRequests = requests.map(r => {
-        if (r.requestId === requestId) {
-          return {
-            ...r,
-            status: 'open',
-            assignedDonorId: null,
-            assignedDonorName: null,
-            assignedDonorPhone: null
-          };
-        }
-        return r;
-      });
-      updateDemoStorage(updatedRequests);
       return;
     }
 
-    // Update request back to open
+    // Update request back to open in Firestore
     const reqRef = doc(db, 'requests', requestId);
     await updateDoc(reqRef, {
       status: 'open',
+      isFullCommitment: false,
       assignedDonorId: null,
       assignedDonorName: null,
-      assignedDonorPhone: null
+      assignedDonorPhone: null,
+      remainingQuantity: ''
     });
   };
 
@@ -363,7 +407,7 @@ export const DataProvider = ({ children }) => {
       const snap = await getDocs(q);
       return snap.docs.map(d => ({ responseId: d.id, ...d.data() }));
     } catch (err) {
-      console.error("Error getting responses for request:", err);
+      console.warn("Notice getting responses for request:", err.message);
       return [];
     }
   };

@@ -34,7 +34,7 @@ const MapRecenter = ({ center }) => {
 };
 
 export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
-  const { t, isRTL } = useLanguage();
+  const { t, isRTL, lang } = useLanguage();
   const [isLocatingGPS, setIsLocatingGPS] = useState(false);
   const [isSearchingOSM, setIsSearchingOSM] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -50,7 +50,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=${isRTL ? 'ar' : 'en'}`);
       const data = await res.json();
       if (data && data.address) {
-        const detectedCity = data.address.state || data.address.city || data.address.town || data.address.county || 'الجزائر';
+        const detectedCity = data.address.state || data.address.city || data.address.town || data.address.county || (isRTL ? 'الجزائر' : 'Algeria');
         const detectedAddress = data.display_name || '';
         return { city: detectedCity, address: detectedAddress };
       }
@@ -62,29 +62,29 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
 
   // Handle map click or coordinate update
   const handleSelectCoords = async (latitude, longitude) => {
-    setStatusMsg({ type: 'info', text: 'جاري تحديد العنوان...' });
+    setStatusMsg({ type: 'info', text: t('locatingStatus') });
     const geocodeResult = await reverseGeocode(latitude, longitude);
     
     onChange({
       lat: latitude,
       lng: longitude,
-      city: geocodeResult?.city || city || 'الجزائر العاصمة',
+      city: geocodeResult?.city || city || (isRTL ? 'الجزائر العاصمة' : 'Algiers'),
       address: geocodeResult?.address || address || ''
     });
 
-    setStatusMsg({ type: 'success', text: 'تم تحديد الإحداثيات بنجاح!' });
+    setStatusMsg({ type: 'success', text: t('locationSuccessStatus') });
     setTimeout(() => setStatusMsg({ type: '', text: '' }), 3000);
   };
 
   // GPS Auto-Detection button handler
   const handleGPSDetect = () => {
     if (!navigator.geolocation) {
-      setStatusMsg({ type: 'error', text: 'خاصية الموقع غير مدعومة على هذا الجهاز.' });
+      setStatusMsg({ type: 'error', text: t('locationErrorStatus') });
       return;
     }
 
     setIsLocatingGPS(true);
-    setStatusMsg({ type: 'info', text: 'جاري تحديد موقعك الحالي...' });
+    setStatusMsg({ type: 'info', text: t('locatingStatus') });
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -94,7 +94,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
       },
       (error) => {
         console.error("GPS detection error:", error);
-        setStatusMsg({ type: 'error', text: 'تعذر الحصول على الموقع تلقائياً. يمكنك النقر على الخريطة.' });
+        setStatusMsg({ type: 'error', text: t('locationErrorStatus') });
         setIsLocatingGPS(false);
       },
       { timeout: 10000, enableHighAccuracy: true }
@@ -135,7 +135,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
 
     setSearchResults([]);
     setSearchQuery('');
-    setStatusMsg({ type: 'success', text: 'تم تعيين العنوان بنجاح!' });
+    setStatusMsg({ type: 'success', text: t('locationSuccessStatus') });
     setTimeout(() => setStatusMsg({ type: '', text: '' }), 3000);
   };
 
@@ -144,7 +144,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
           <MapPin className="w-3.5 h-3.5 text-emerald-800" />
-          <span>تحديد المكان على الخريطة:</span>
+          <span>{t('clickMapToPinLocation')}</span>
         </span>
 
         {/* Free GPS Auto Location Button */}
@@ -155,7 +155,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
           className="flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-xs transition-colors min-h-[36px]"
         >
           {isLocatingGPS ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
-          <span>موقعي الحالي (GPS)</span>
+          <span>{t('useGPSBtn')}</span>
         </button>
       </div>
 
@@ -169,7 +169,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
         </div>
       )}
 
-      {/* Free Address Search Bar */}
+      {/* Address Search Bar */}
       <div className="relative">
         <form onSubmit={handleOSMSearch} className="flex items-center gap-1.5">
           <div className="relative flex-grow">
@@ -178,7 +178,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="ابحث عن الحي أو الشارع في الجزائر..."
+              placeholder={isRTL ? 'ابحث عن الحي أو الشارع في الجزائر...' : 'Search street or neighborhood in Algeria...'}
               className="w-full pl-8 pr-3 rtl:pr-8 rtl:pl-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-emerald-700 outline-none min-h-[38px]"
             />
           </div>
@@ -187,7 +187,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
             disabled={isSearchingOSM}
             className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg transition-colors shrink-0 min-h-[38px]"
           >
-            {isSearchingOSM ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'بحث'}
+            {isSearchingOSM ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (isRTL ? 'بحث' : 'Search')}
           </button>
         </form>
 

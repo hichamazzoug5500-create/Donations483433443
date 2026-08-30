@@ -35,8 +35,8 @@ export const isValidAlgerianPhone = (phone) => {
   if (!phone) return false;
   const digits = phone.replace(/\D/g, '');
   
-  // International format: 213 + 9 digits = 12 digits (e.g. 213550123456)
-  if (digits.startsWith('213') && digits.length === 11 || digits.length === 12) {
+  // International format: 213 + 8 or 9 digits = 11 or 12 digits (e.g. 213550123456)
+  if (digits.startsWith('213') && (digits.length === 11 || digits.length === 12)) {
     return true;
   }
   

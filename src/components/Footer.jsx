@@ -1,5 +1,5 @@
 import React from 'react';
-import { HeartHandshake, ShieldCheck, Heart } from 'lucide-react';
+import { ShieldCheck, Heart } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 export const Footer = () => {
@@ -14,43 +14,43 @@ export const Footer = () => {
               <div className="w-7 h-7 rounded-lg bg-emerald-800 flex items-center justify-center text-white text-xs font-bold">
                 أمل
               </div>
-              <span>منصة أمل الجزائر</span>
+              <span>{t('brandName')}</span>
             </div>
-            <p className="text-xs text-slate-400 max-w-sm leading-relaxed">
-              منصة غير ربحية ومباشرة لربط الجمعيات الخيرية والمبادرات الإنسانية في الجزائر مع المتبرعين والمحسنين.
+            <p className="text-xs text-slate-400 leading-relaxed max-w-md">
+              {t('footerDescription')}
             </p>
-            <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
+            <div className="inline-flex items-center gap-1.5 text-[11px] text-emerald-400 font-semibold bg-emerald-950/60 px-2.5 py-1 rounded-md border border-emerald-800/40">
               <ShieldCheck className="w-3.5 h-3.5" />
-              <span>شبكة العمل الخيري والتكافل الإنساني بالجزائر 🇩🇿</span>
+              <span>{t('footerNetworkBadge')}</span>
             </div>
           </div>
 
-          <div className="hidden sm:block">
-            <h4 className="text-white font-semibold text-xs mb-2">فئات المساعدات</h4>
-            <ul className="space-y-1.5 text-xs">
-              <li><span>مواد غذائية ومؤونة</span></li>
-              <li><span>ألبسة وأغطية</span></li>
-              <li><span>مستلزمات طبية وأدوية</span></li>
-              <li><span>مأوى وسكن مؤقت</span></li>
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider">{t('footerAidCategories')}</h4>
+            <ul className="space-y-1.5 text-xs text-slate-400">
+              <li>• {t('catFood')}</li>
+              <li>• {t('catClothing')}</li>
+              <li>• {t('catMedical')}</li>
+              <li>• {t('catShelter')}</li>
+              <li>• {t('catOther')}</li>
             </ul>
           </div>
 
-          <div className="hidden sm:block">
-            <h4 className="text-white font-semibold text-xs mb-2">عن المنصة</h4>
-            <ul className="space-y-1.5 text-xs">
-              <li><span>جمعيات ومنظمات معتمدة</span></li>
-              <li><span>متبرعون ومحسنون</span></li>
-              <li><span>تنسيق وتوصيل مباشر</span></li>
-            </ul>
+          <div className="space-y-2">
+            <h4 className="text-xs font-bold text-white uppercase tracking-wider">{t('footerPlatformLinks')}</h4>
+            <p className="text-xs text-slate-400 leading-relaxed">
+              {t('footerHandcrafted')}
+            </p>
           </div>
         </div>
 
-        <div className="pt-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-2">
-          <p>© جميع الحقوق محفوظة لمنصة أمل الجزائر للتكافل الخيري.</p>
-          <p className="flex items-center gap-1">
-            <span>صنع لدعم العمل الخيري بالجزائر</span>
-            <Heart className="w-3 h-3 text-red-500 fill-current inline" />
-          </p>
+        <div className="border-t border-slate-800 pt-4 flex flex-col sm:flex-row justify-between items-center gap-2 text-[11px] text-slate-500">
+          <div>{t('footerCopyright')}</div>
+          <div className="flex items-center gap-1">
+            <span>Made with</span>
+            <Heart className="w-3.5 h-3.5 text-red-500 fill-red-500 inline" />
+            <span>for Algeria</span>
+          </div>
         </div>
       </div>
     </footer>

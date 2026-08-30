@@ -13,13 +13,10 @@ import {
   CheckCircle, 
   Clock, 
   Building2, 
-  Users, 
   PhoneCall,
-  Calendar,
   PackageCheck,
   Trash2,
-  Copy,
-  Phone
+  Copy
 } from 'lucide-react';
 
 export const RecipientDashboard = () => {
@@ -78,7 +75,7 @@ export const RecipientDashboard = () => {
       navigator.clipboard.writeText(phone);
       setCopiedPhoneId(id);
       setTimeout(() => setCopiedPhoneId(null), 2000);
-      showSuccess('تم نسخ رقم الهاتف!');
+      showSuccess(t('copiedPhone'));
     }
   };
 
@@ -91,18 +88,16 @@ export const RecipientDashboard = () => {
     const willFulfill = request.status !== 'fulfilled';
     setConfirmDialog({
       isOpen: true,
-      title: willFulfill ? 'تعليم الطلب كمكتمل؟' : 'إعادة فتح الطلب؟',
-      message: willFulfill 
-        ? 'هل تم استلام المساعدات وتلبية هذا الاحتياج بالفعل من المتبرع؟'
-        : 'سيتم إعادة عرض هذا الطلب في قائمة الاحتياجات المفتوحة للمتبرعين.',
+      title: willFulfill ? t('confirmFulfillTitle') : t('confirmReopenTitle'),
+      message: willFulfill ? t('confirmFulfillMsg') : t('confirmReopenMsg'),
       isDestructive: false,
       onConfirm: async () => {
         try {
           await setRequestStatus(request.requestId, willFulfill ? 'fulfilled' : 'open');
-          showSuccess(willFulfill ? 'تم تعليم الطلب كمكتمل بنجاح!' : 'تمت إعادة فتح الطلب!');
+          showSuccess(willFulfill ? t('statusFulfilled') : t('statusOpen'));
         } catch (err) {
           console.error("Error toggling status:", err);
-          showError('تعذر تحديث حالة الطلب.');
+          showError('Error updating status');
         } finally {
           setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         }
@@ -113,16 +108,16 @@ export const RecipientDashboard = () => {
   const handleDelete = (request) => {
     setConfirmDialog({
       isOpen: true,
-      title: 'حذف طلب المساعدة',
-      message: 'هل أنت متأكد من رغبتك في حذف هذا الطلب نهائياً؟ لن يمكن التراجع عن هذه الخطوة.',
+      title: t('confirmDeleteTitle'),
+      message: t('confirmDeleteMsg'),
       isDestructive: true,
       onConfirm: async () => {
         try {
           await deleteRequest(request.requestId);
-          showSuccess('تم حذف الطلب بنجاح.');
+          showSuccess('Request deleted successfully');
         } catch (err) {
           console.error("Error deleting request:", err);
-          showError('تعذر حذف الطلب.');
+          showError('Error deleting request');
         } finally {
           setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         }
@@ -136,41 +131,43 @@ export const RecipientDashboard = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 pb-24 md:pb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-6 space-y-3 sm:space-y-5 pb-safe-nav md:pb-12">
       
       {/* Dashboard Banner */}
-      <div className="bg-slate-900 rounded-2xl p-4 sm:p-6 text-white shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+      <div className="bg-slate-900 rounded-2xl p-3.5 sm:p-6 text-white shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-4">
         <div className="space-y-1">
-          <span className="bg-amber-400 text-slate-950 text-[11px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider">
-            لوحة قيادة الجمعية
+          <span className="bg-amber-400 text-slate-950 text-[10px] sm:text-[11px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider">
+            {t('recipientDashBadge')}
           </span>
-          <h1 className="text-lg sm:text-2xl font-bold flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-amber-300 shrink-0" />
-            <span>{userProfile?.orgName || 'الجمعية'}</span>
+          <h1 className="text-base sm:text-2xl font-bold flex items-center gap-2">
+            <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-300 shrink-0" />
+            <span>{userProfile?.orgName || t('charityOrg')}</span>
           </h1>
-          <p className="text-slate-300 text-xs">
-            {userProfile?.city} • هاتف الجمعية: <span className="dir-ltr inline-block font-bold">{userProfile?.phone}</span>
+          <p className="text-slate-300 text-[11px] sm:text-xs flex items-center gap-2 flex-wrap">
+            {userProfile?.city && <span>{userProfile.city} •</span>}
+            <span>{t('contactPhoneLabel')}:</span>
+            <span className="dir-ltr inline-block font-bold">{userProfile?.phone}</span>
           </p>
         </div>
 
         <button
           onClick={() => { setEditingRequest(null); setIsPostModalOpen(true); }}
-          className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-extrabold text-xs sm:text-sm px-5 py-3 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 shrink-0 min-h-[46px]"
+          className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-extrabold text-xs px-4 py-2.5 sm:px-5 sm:py-3 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 shrink-0 min-h-[42px] sm:min-h-[46px]"
         >
           <PlusCircle className="w-4 h-4" />
-          <span>إضافة طلب مساعدة جديد</span>
+          <span>{t('addNewNeedBtn')}</span>
         </button>
       </div>
 
-      {/* Stats Grid (2x2 on mobile, 4 columns on desktop) */}
+      {/* Stats Grid */}
       {loadingRequests ? (
         <DashboardStatsSkeleton />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-3.5">
           <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] text-slate-500 font-bold block">إجمالي الطلبات</span>
-              <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">{ownRequests.length}</div>
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-bold block">{t('totalPostedRequests')}</span>
+              <div className="text-lg sm:text-2xl font-extrabold text-slate-900 mt-0.5">{ownRequests.length}</div>
             </div>
             <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
               <Clock className="w-4 h-4" />
@@ -179,8 +176,8 @@ export const RecipientDashboard = () => {
 
           <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] text-slate-500 font-bold block">مفتوحة للمساعدة</span>
-              <div className="text-xl sm:text-2xl font-extrabold text-emerald-800 mt-0.5">{openCount}</div>
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-bold block">{t('openRequestsCount')}</span>
+              <div className="text-lg sm:text-2xl font-extrabold text-emerald-800 mt-0.5">{openCount}</div>
             </div>
             <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg">
               <HelpingHand className="w-4 h-4" />
@@ -189,8 +186,8 @@ export const RecipientDashboard = () => {
 
           <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] text-slate-500 font-bold block">قيد التكفل</span>
-              <div className="text-xl sm:text-2xl font-extrabold text-amber-600 mt-0.5">{inProgressCount}</div>
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-bold block">{t('inProgressRequestsCount')}</span>
+              <div className="text-lg sm:text-2xl font-extrabold text-amber-600 mt-0.5">{inProgressCount}</div>
             </div>
             <div className="p-2 bg-amber-50 text-amber-800 rounded-lg">
               <PackageCheck className="w-4 h-4" />
@@ -199,8 +196,8 @@ export const RecipientDashboard = () => {
 
           <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
-              <span className="text-[11px] text-slate-500 font-bold block">مكتملة</span>
-              <div className="text-xl sm:text-2xl font-extrabold text-emerald-800 mt-0.5">{fulfilledCount}</div>
+              <span className="text-[10px] sm:text-[11px] text-slate-500 font-bold block">{t('fulfilledRequestsCount')}</span>
+              <div className="text-lg sm:text-2xl font-extrabold text-emerald-800 mt-0.5">{fulfilledCount}</div>
             </div>
             <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg">
               <CheckCircle className="w-4 h-4" />
@@ -217,7 +214,7 @@ export const RecipientDashboard = () => {
             activeTab === 'all' ? 'bg-slate-900 text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'
           }`}
         >
-          جميع الطلبات ({ownRequests.length})
+          {t('allRequestsTab')} ({ownRequests.length})
         </button>
 
         <button
@@ -226,7 +223,7 @@ export const RecipientDashboard = () => {
             activeTab === 'open' ? 'bg-emerald-800 text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'
           }`}
         >
-          مفتوحة ({openCount})
+          {t('openRequestsTab')} ({openCount})
         </button>
 
         <button
@@ -235,7 +232,7 @@ export const RecipientDashboard = () => {
             activeTab === 'in_progress' ? 'bg-amber-500 text-slate-950 shadow-xs' : 'bg-white text-slate-700 border border-slate-200'
           }`}
         >
-          قيد التكفل ({inProgressCount})
+          {t('inProgressRequestsTab')} ({inProgressCount})
         </button>
 
         <button
@@ -244,28 +241,28 @@ export const RecipientDashboard = () => {
             activeTab === 'fulfilled' ? 'bg-emerald-700 text-white shadow-xs' : 'bg-white text-slate-700 border border-slate-200'
           }`}
         >
-          مكتملة ({fulfilledCount})
+          {t('fulfilledRequestsTab')} ({fulfilledCount})
         </button>
       </div>
 
       {/* Requests Feed */}
       {loadingRequests ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           {[1, 2, 3].map(i => <RequestCardSkeleton key={i} />)}
         </div>
       ) : filteredRequests.length === 0 ? (
         <div className="bg-white rounded-2xl p-8 sm:p-12 text-center space-y-3 border border-dashed border-slate-300">
-          <h3 className="text-base font-bold text-slate-800">لا توجد طلبات في هذه القائمة حالياً</h3>
+          <h3 className="text-base font-bold text-slate-800">{t('noRequestsInList')}</h3>
           <button
             onClick={() => { setEditingRequest(null); setIsPostModalOpen(true); }}
             className="inline-flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs px-5 py-2.5 rounded-xl shadow-xs transition-all active:scale-95 min-h-[42px]"
           >
             <PlusCircle className="w-4 h-4" />
-            <span>إضافة أول طلب مساعدة</span>
+            <span>{t('postFirstNeedCTA')}</span>
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-5">
           {filteredRequests.map((req) => {
             const responsesForThisReq = donorResponsesMap[req.requestId] || [];
             const latestCommitment = responsesForThisReq[0] || null;
@@ -282,23 +279,23 @@ export const RecipientDashboard = () => {
                   <button
                     onClick={() => handleDelete(req)}
                     className="absolute top-3 left-3 rtl:left-auto rtl:right-3 p-2 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition-all min-h-[36px] min-w-[36px] flex items-center justify-center"
-                    title="حذف الطلب"
+                    title={t('deleteRequestBtn')}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
                 {/* 🌟 PROMINENT COMMITTED DONOR CONTACT BOX 🌟 */}
-                {(req.assignedDonorName || req.status === 'in_progress') && (
+                {(req.assignedDonorName || req.status === 'in_progress' || responsesForThisReq.length > 0) && (
                   <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-3.5 sm:p-4 text-xs space-y-3 shadow-xs">
                     
                     <div className="flex items-center justify-between">
                       <span className="flex items-center gap-1.5 font-extrabold text-emerald-950 text-xs sm:text-sm">
                         <PackageCheck className="w-4 h-4 text-emerald-700" />
-                        <span>معلومات المتبرع المتكفل:</span>
+                        <span>{t('committedDonorInfo')}</span>
                       </span>
                       <span className="bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded-full text-[10px] font-bold">
-                        ملتزم بالتكفل
+                        {req.isFullCommitment || latestCommitment?.commitmentType === 'full' ? t('fullCoverageBadge') : t('partialAidBadge')}
                       </span>
                     </div>
 
@@ -306,39 +303,54 @@ export const RecipientDashboard = () => {
                       
                       {/* Donor Name */}
                       <div className="flex items-center justify-between">
-                        <span className="text-slate-500 text-[11px]">اسم المتبرع / الجهة:</span>
+                        <span className="text-slate-500 text-[11px]">{t('donorNameLabel')}</span>
                         <span className="font-extrabold text-slate-900 text-sm">
-                          {req.assignedDonorName || latestCommitment?.donorOrgName || 'متبرع مسجل'}
+                          {req.assignedDonorName || latestCommitment?.donorOrgName || t('donorOrg')}
                         </span>
                       </div>
 
                       {/* Donor Phone */}
                       {(req.assignedDonorPhone || latestCommitment?.donorPhone) && (
                         <div className="flex items-center justify-between pt-1 border-t border-slate-100">
-                          <span className="text-slate-500 text-[11px]">رقم هاتف المتبرع:</span>
+                          <span className="text-slate-500 text-[11px]">{t('donorPhoneLabel')}</span>
                           <span className="font-extrabold text-slate-900 text-sm dir-ltr">
                             {req.assignedDonorPhone || latestCommitment?.donorPhone}
                           </span>
                         </div>
                       )}
 
-                      {/* Pledged quantity / notes if available */}
+                      {/* Pledged quantity */}
                       {latestCommitment?.pledgedQuantity && (
                         <div className="flex items-center justify-between text-[11px] text-slate-600 pt-1 border-t border-slate-100">
-                          <span>الكمية المتعهد بها:</span>
+                          <span>{t('pledgedQtyLabel')}</span>
                           <span className="font-bold text-emerald-900">{latestCommitment.pledgedQuantity}</span>
+                        </div>
+                      )}
+
+                      {/* Remaining quantity */}
+                      {(req.remainingQuantity || latestCommitment?.remainingQuantity) && (
+                        <div className="flex items-center justify-between text-[11px] text-amber-800 bg-amber-50/60 p-1.5 rounded-lg border border-amber-200">
+                          <span className="font-semibold">{t('remainingNeededTag')}</span>
+                          <span className="font-extrabold">{req.remainingQuantity || latestCommitment?.remainingQuantity}</span>
                         </div>
                       )}
 
                       {latestCommitment?.deliveryDate && (
                         <div className="flex items-center justify-between text-[11px] text-slate-600">
-                          <span>موعد التسليم المقترح:</span>
+                          <span>{t('deliveryDateLabel')}</span>
                           <span className="font-bold text-slate-800">{latestCommitment.deliveryDate}</span>
+                        </div>
+                      )}
+
+                      {latestCommitment?.donorNotes && (
+                        <div className="text-[11px] text-slate-600 pt-1 border-t border-slate-100">
+                          <span className="text-slate-400 block">{t('donorNotesLabel')}</span>
+                          <span className="font-medium text-slate-700">{latestCommitment.donorNotes}</span>
                         </div>
                       )}
                     </div>
 
-                    {/* 1-Tap Action Buttons (Call Now & Copy Number) */}
+                    {/* Action Buttons (Call Now & Copy Number) */}
                     {(req.assignedDonorPhone || latestCommitment?.donorPhone) && (
                       <div className="grid grid-cols-2 gap-2 pt-0.5">
                         <button
@@ -347,7 +359,7 @@ export const RecipientDashboard = () => {
                           className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white hover:bg-slate-50 border border-emerald-300 text-emerald-900 font-bold rounded-xl text-xs min-h-[42px] transition-colors"
                         >
                           <Copy className="w-3.5 h-3.5" />
-                          <span>{copiedPhoneId === req.requestId ? 'تم النسخ!' : 'نسخ الرقم'}</span>
+                          <span>{copiedPhoneId === req.requestId ? t('copiedPhone') : t('copyPhoneBtn')}</span>
                         </button>
 
                         <a
@@ -355,7 +367,7 @@ export const RecipientDashboard = () => {
                           className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold rounded-xl text-xs shadow-xs min-h-[42px] transition-colors"
                         >
                           <PhoneCall className="w-3.5 h-3.5" />
-                          <span>اتصال بالمتبرع</span>
+                          <span>{t('callDonorBtn')}</span>
                         </a>
                       </div>
                     )}
