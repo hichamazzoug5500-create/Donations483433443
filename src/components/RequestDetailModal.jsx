@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   X, 
   MapPin, 
@@ -42,10 +42,20 @@ export const RequestDetailModal = ({ request, onClose }) => {
   const [isCancelling, setIsCancelling] = useState(false);
   const [successMessage, setSuccessMessage] = useState(false);
 
+  // 🌟 Lock background body scroll while modal is active 🌟
+  useEffect(() => {
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalStyle || 'unset';
+    };
+  }, []);
+
   if (!request) return null;
 
   const isAlreadyCommittedByMe = Boolean(
-    userProfile?.uid && request.assignedDonorId === userProfile.uid
+    (currentUser?.uid && request.assignedDonorId === currentUser.uid) ||
+    (userProfile?.uid && request.assignedDonorId === userProfile.uid)
   );
 
   const copyPhone = () => {
@@ -107,16 +117,11 @@ export const RequestDetailModal = ({ request, onClose }) => {
   const ArrowIcon = isRTL ? ArrowLeft : ArrowRight;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overscroll-contain">
       
-      {/* Modal Container */}
-      <div className="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[92vh] sm:max-h-[88vh] animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 duration-200">
+      {/* Centered Modal Card */}
+      <div className="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col h-[86vh] sm:h-[88vh] max-h-[86vh] sm:max-h-[88vh] animate-in fade-in zoom-in-95 duration-150">
         
-        {/* Mobile Drag Handle */}
-        <div className="sm:hidden w-full pt-3 pb-1 flex justify-center bg-slate-900">
-          <div className="w-12 h-1.5 bg-slate-700 rounded-full"></div>
-        </div>
-
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-start justify-between relative shrink-0">
           <div className="space-y-1 pr-6 rtl:pl-6 rtl:pr-0">
@@ -165,7 +170,7 @@ export const RequestDetailModal = ({ request, onClose }) => {
           </button>
         </div>
 
-        {/* 🌟 3-SEGMENT MOBILE NAVIGATION TABS 🌟 */}
+        {/* 🌟 3-SEGMENT NAVIGATION TABS 🌟 */}
         <div className="bg-slate-100 p-1.5 border-b border-slate-200 grid grid-cols-3 gap-1 shrink-0">
           <button
             type="button"
@@ -207,12 +212,10 @@ export const RequestDetailModal = ({ request, onClose }) => {
           </button>
         </div>
 
-        {/* 🌟 TAB BODY (Scrollable with ample vertical padding) 🌟 */}
-        <div className="p-4 sm:p-6 overflow-y-auto flex-grow space-y-4 pb-20 sm:pb-6">
+        {/* 🌟 TAB BODY (Scrollable with isolated body scroll) 🌟 */}
+        <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-4 pb-6">
           
-          {/* ========================================================= */}
-          {/* TAB 1: OVERVIEW & CONTACT                                 */}
-          {/* ========================================================= */}
+          {/* TAB 1: OVERVIEW */}
           {activeTab === 'overview' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               
@@ -226,7 +229,7 @@ export const RequestDetailModal = ({ request, onClose }) => {
                 </p>
               </div>
 
-              {/* Scope / Quantity & Remaining Quantity */}
+              {/* Quantity scope & Remaining Needed */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {request.quantity && (
                   <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 flex items-center justify-between">
@@ -297,9 +300,7 @@ export const RequestDetailModal = ({ request, onClose }) => {
             </div>
           )}
 
-          {/* ========================================================= */}
-          {/* TAB 2: DEDICATED LOCATION & MAP                           */}
-          {/* ========================================================= */}
+          {/* TAB 2: DEDICATED LOCATION & MAP */}
           {activeTab === 'map' && (
             <div className="space-y-3 animate-in fade-in duration-150">
               
@@ -332,9 +333,7 @@ export const RequestDetailModal = ({ request, onClose }) => {
             </div>
           )}
 
-          {/* ========================================================= */}
-          {/* TAB 3: DEDICATED COMMITMENT / PLEDGE FORM                 */}
-          {/* ========================================================= */}
+          {/* TAB 3: COMMITMENT / PLEDGE FORM */}
           {activeTab === 'commit' && (
             <div className="space-y-4 animate-in fade-in duration-150">
               

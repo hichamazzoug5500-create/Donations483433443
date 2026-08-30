@@ -211,21 +211,26 @@ export const DataProvider = ({ children }) => {
   };
 
   const createRequest = async (requestData) => {
-    if (!userProfile) throw new Error("User must be logged in to post a request");
+    const authUid = currentUser?.uid || userProfile?.uid;
+    if (!authUid) throw new Error("User must be logged in to post a request");
+
+    const effectiveOrgName = userProfile?.orgName || currentUser?.displayName || 'جمعية خيرية';
+    const effectivePhone = requestData.phone || userProfile?.phone || '';
+    const effectiveCity = requestData.location?.city || userProfile?.city || 'الجزائر';
 
     const payload = {
-      recipientId: userProfile.uid,
-      orgName: userProfile.orgName,
-      needDescription: requestData.needDescription,
-      category: requestData.category,
+      recipientId: authUid,
+      orgName: effectiveOrgName,
+      needDescription: requestData.needDescription || '',
+      category: requestData.category || 'food',
       quantity: requestData.quantity || '',
       location: {
-        city: requestData.location?.city || userProfile.city || 'الجزائر العاصمة',
+        city: effectiveCity,
         address: requestData.location?.address || '',
         lat: Number(requestData.location?.lat) || 36.7538,
         lng: Number(requestData.location?.lng) || 3.0588
       },
-      phone: requestData.phone || userProfile.phone || '',
+      phone: effectivePhone,
       urgency: requestData.urgency || 'medium',
       status: 'open'
     };
@@ -296,12 +301,15 @@ export const DataProvider = ({ children }) => {
   // Two-step logic: Confirm Aid Pledge / Accept Mission (Full or Partial)
   const commitToRequest = async (requestId, commitmentDetails = {}) => {
     const isFull = commitmentDetails.commitmentType !== 'partial';
+    const authUid = currentUser?.uid || userProfile?.uid || 'donor-dz';
+    const effectiveOrgName = userProfile?.orgName || currentUser?.displayName || 'محسن / متبرع';
+    const effectivePhone = userProfile?.phone || '';
 
     const payload = {
       requestId,
-      donorId: userProfile?.uid || 'donor-dz',
-      donorOrgName: userProfile?.orgName || 'محسن / متبرع',
-      donorPhone: userProfile?.phone || '',
+      donorId: authUid,
+      donorOrgName: effectiveOrgName,
+      donorPhone: effectivePhone,
       commitmentType: isFull ? 'full' : 'partial',
       pledgedQuantity: commitmentDetails.pledgedQuantity || '',
       remainingQuantity: isFull ? '' : (commitmentDetails.remainingQuantity || ''),

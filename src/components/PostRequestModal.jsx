@@ -10,7 +10,8 @@ import {
   FileText, 
   MapPin, 
   CheckCircle2,
-  Package
+  Package,
+  Building2
 } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useAuth } from '../context/AuthContext';
@@ -18,11 +19,11 @@ import { useLanguage } from '../context/LanguageContext';
 import { useToast } from '../context/ToastContext';
 import { LocationPicker } from './LocationPicker';
 import { ALGERIA_WILAYAS } from '../data/algeriaWilayas';
-import { sanitizePhoneInput, isValidAlgerianPhone } from '../utils/phoneUtils';
+import { sanitizePhoneInput } from '../utils/phoneUtils';
 
 export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
   const { createRequest, updateRequest } = useData();
-  const { userProfile } = useAuth();
+  const { userProfile, currentUser } = useAuth();
   const { t, isRTL } = useLanguage();
   const { showSuccess, showError } = useToast();
   const isEditing = Boolean(initialData);
@@ -33,7 +34,7 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
     needDescription: '',
     category: 'food',
     quantity: '',
-    city: userProfile?.city || 'Alger',
+    city: userProfile?.city || 'الجزائر',
     address: '',
     lat: 36.7538,
     lng: 3.0588,
@@ -44,13 +45,23 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // 🌟 Lock background body scroll while modal is active 🌟
+  useEffect(() => {
+    if (!isOpen) return;
+    const originalStyle = window.getComputedStyle(document.body).overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = originalStyle || 'unset';
+    };
+  }, [isOpen]);
+
   useEffect(() => {
     if (initialData) {
       setFormData({
         needDescription: initialData.needDescription || '',
         category: initialData.category || 'food',
         quantity: initialData.quantity || '',
-        city: initialData.location?.city || userProfile?.city || 'Alger',
+        city: initialData.location?.city || userProfile?.city || 'الجزائر',
         address: initialData.location?.address || '',
         lat: initialData.location?.lat || 36.7538,
         lng: initialData.location?.lng || 3.0588,
@@ -58,15 +69,15 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
         urgency: initialData.urgency || 'medium'
       });
       setCurrentStep(1);
-    } else if (userProfile) {
+    } else if (userProfile || currentUser) {
       setFormData(prev => ({
         ...prev,
-        city: userProfile.city || 'Alger',
-        phone: userProfile.phone || ''
+        city: userProfile?.city || prev.city || 'الجزائر',
+        phone: userProfile?.phone || prev.phone || ''
       }));
       setCurrentStep(1);
     }
-  }, [initialData, userProfile, isOpen]);
+  }, [initialData, userProfile, currentUser, isOpen]);
 
   if (!isOpen) return null;
 
@@ -104,8 +115,8 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
 
   const handleNextStep = () => {
     setError('');
-    if (!formData.needDescription.trim()) {
-      setError(t('needDescLabel'));
+    if (!formData.needDescription || formData.needDescription.trim().length < 3) {
+      setError(isRTL ? 'يرجى كتابة تفاصيل الاحتياج (3 أحرف على الأقل)' : 'Please enter need details (at least 3 characters)');
       return;
     }
     setCurrentStep(2);
@@ -115,19 +126,14 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
     e.preventDefault();
     setError('');
 
-    if (!formData.needDescription.trim()) {
+    if (!formData.needDescription || formData.needDescription.trim().length < 3) {
       setCurrentStep(1);
-      setError(t('needDescLabel'));
+      setError(isRTL ? 'يرجى كتابة تفاصيل الاحتياج (3 أحرف على الأقل)' : 'Please enter need details (at least 3 characters)');
       return;
     }
 
-    if (!formData.city.trim()) {
+    if (!formData.city || !formData.city.trim()) {
       setError(t('wilayaLabel'));
-      return;
-    }
-
-    if (!formData.phone.trim() || !isValidAlgerianPhone(formData.phone)) {
-      setError(isRTL ? 'يرجى إدخال رقم هاتف جزائري صحيح (مثال: 0550123456 أو 0661987654)' : 'Please enter a valid Algerian phone number (e.g. 0550123456)');
       return;
     }
 
@@ -135,16 +141,16 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
     try {
       const payload = {
         needDescription: formData.needDescription.trim(),
-        category: formData.category,
-        quantity: formData.quantity.trim(),
+        category: formData.category || 'food',
+        quantity: (formData.quantity || '').trim(),
         location: {
-          city: formData.city.trim(),
-          address: formData.address.trim(),
+          city: (formData.city || 'الجزائر').trim(),
+          address: (formData.address || '').trim(),
           lat: Number(formData.lat) || 36.7538,
           lng: Number(formData.lng) || 3.0588
         },
-        phone: formData.phone.trim(),
-        urgency: formData.urgency
+        phone: (formData.phone || userProfile?.phone || '').trim(),
+        urgency: formData.urgency || 'medium'
       };
 
       if (isEditing) {
@@ -158,8 +164,8 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
       onClose();
     } catch (err) {
       console.error("Error saving request:", err);
-      setError(err.message || 'Error saving request');
-      showError('Error saving request');
+      setError(err.message || 'Error saving request. Please check your connection.');
+      showError(err.message || 'Error saving request');
     } finally {
       setIsSubmitting(false);
     }
@@ -169,14 +175,9 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
   const PrevArrow = isRTL ? ArrowRight : ArrowLeft;
 
   return (
-    <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in duration-150">
-      <div className="bg-white w-full max-w-2xl rounded-t-3xl sm:rounded-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col max-h-[94vh] sm:max-h-[90vh] animate-in slide-in-from-bottom-6 sm:slide-in-from-bottom-0 duration-200">
+    <div className="fixed inset-0 z-50 bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overscroll-contain">
+      <div className="bg-white w-full max-w-2xl rounded-2xl overflow-hidden shadow-2xl border border-slate-100 flex flex-col h-[86vh] sm:h-[88vh] max-h-[86vh] sm:max-h-[88vh] animate-in fade-in zoom-in-95 duration-150">
         
-        {/* Mobile Drag Bar */}
-        <div className="sm:hidden w-full pt-3 pb-1 flex justify-center bg-slate-900">
-          <div className="w-12 h-1.5 bg-slate-700 rounded-full"></div>
-        </div>
-
         {/* Modal Header */}
         <div className="p-4 sm:p-5 bg-slate-900 text-white flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2">
@@ -211,10 +212,10 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
           <button
             type="button"
             onClick={() => {
-              if (formData.needDescription.trim()) {
+              if (formData.needDescription && formData.needDescription.trim().length >= 3) {
                 setCurrentStep(2);
               } else {
-                setError(t('needDescLabel'));
+                setError(isRTL ? 'يرجى كتابة تفاصيل الاحتياج أولاً' : 'Please enter need details first');
               }
             }}
             className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 min-h-[38px] ${
@@ -229,8 +230,8 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
         </div>
 
         {/* Form Body */}
-        <form onSubmit={handleSubmit} className="flex flex-col flex-grow overflow-hidden">
-          <div className="p-4 sm:p-6 overflow-y-auto space-y-4 flex-grow pb-24 sm:pb-6">
+        <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
+          <div className="p-4 sm:p-6 overflow-y-auto overscroll-contain flex-1 space-y-4 pb-6">
             
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs font-semibold flex items-center gap-2">
@@ -239,9 +240,7 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
               </div>
             )}
 
-            {/* ========================================================= */}
-            {/* STEP 1: NEED DETAILS                                      */}
-            {/* ========================================================= */}
+            {/* STEP 1: NEED DETAILS */}
             {currentStep === 1 && (
               <div className="space-y-4 animate-in fade-in duration-150">
                 
@@ -257,7 +256,7 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
                     value={formData.needDescription}
                     onChange={handleChange}
                     placeholder={t('needDescPlaceholder')}
-                    className="w-full px-3.5 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-700 text-xs sm:text-sm outline-none resize-none leading-relaxed"
+                    className="w-full px-3.5 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-700 text-xs sm:text-sm outline-none resize-none leading-relaxed min-h-[100px]"
                   />
                 </div>
 
@@ -316,9 +315,7 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
               </div>
             )}
 
-            {/* ========================================================= */}
-            {/* STEP 2: LOCATION & CONTACT                                */}
-            {/* ========================================================= */}
+            {/* STEP 2: LOCATION & CONTACT */}
             {currentStep === 2 && (
               <div className="space-y-4 animate-in fade-in duration-150">
                 
@@ -348,7 +345,6 @@ export const PostRequestModal = ({ isOpen, onClose, initialData = null }) => {
                       <input
                         type="tel"
                         name="phone"
-                        required
                         value={formData.phone}
                         onChange={handleChange}
                         placeholder="0550 12 34 56"

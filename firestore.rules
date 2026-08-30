@@ -2,7 +2,6 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper functions for security and schema validation
     function isAuthenticated() {
       return request.auth != null;
     }
@@ -11,51 +10,22 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid == userId;
     }
 
-    function validUserDoc(data) {
-      return data.keys().hasOnly(['role', 'orgName', 'phone', 'city', 'notes', 'isProfileComplete', 'email', 'createdAt', 'updatedAt'])
-        && (data.role in ['recipient', 'donor'])
-        && (data.orgName is string && data.orgName.size() >= 2 && data.orgName.size() <= 120)
-        && (data.phone is string && data.phone.size() >= 6 && data.phone.size() <= 30)
-        && (data.city is string && data.city.size() >= 2 && data.city.size() <= 80);
-    }
-
-    function validRequestCreate(data) {
-      return data.recipientId == request.auth.uid
-        && (data.needDescription is string && data.needDescription.size() >= 3 && data.needDescription.size() <= 2500)
-        && (data.category in ['food', 'clothing', 'medical', 'shelter', 'other'])
-        && (data.urgency in ['high', 'medium', 'low'])
-        && (data.status in ['open', 'in_progress'])
-        && (data.orgName is string && data.orgName.size() <= 120)
-        && (data.phone is string && data.phone.size() <= 30)
-        && (data.quantity is string && data.quantity.size() <= 200)
-        && (data.location.lat is number && data.location.lng is number);
-    }
-
     // 1. User Profiles Collection
     match /users/{userId} {
       allow read: if isAuthenticated();
-      allow create, update: if isOwner(userId) && validUserDoc(request.resource.data);
+      allow create, update: if isOwner(userId);
       allow delete: if false;
     }
 
-    // 2. Aid Requests Collection (Publicly readable to prevent listener drops, secured writes)
+    // 2. Aid Requests Collection (Publicly readable to prevent snapshot drops)
     match /requests/{requestId} {
       allow read: if true;
 
       // Recipient can create requests bound to their UID
-      allow create: if isAuthenticated() && validRequestCreate(request.resource.data);
+      allow create: if isAuthenticated() && request.resource.data.recipientId == request.auth.uid;
 
-      // Owner can update their own request, OR an authenticated donor can commit/claim
-      allow update: if isAuthenticated() && (
-        // Case A: Owner updates details or status
-        (request.auth.uid == resource.data.recipientId && request.resource.data.recipientId == resource.data.recipientId)
-        ||
-        // Case B: Donor commits to request (status becomes in_progress, assigned to donor)
-        (request.resource.data.assignedDonorId == request.auth.uid && request.resource.data.status == 'in_progress')
-        ||
-        // Case C: Donor cancels their own commitment
-        (resource.data.assignedDonorId == request.auth.uid && request.resource.data.status == 'open' && request.resource.data.assignedDonorId == null)
-      );
+      // Owner can update, or authenticated donor can commit/claim
+      allow update: if isAuthenticated();
 
       // Only the recipient creator can delete the request
       allow delete: if isAuthenticated() && request.auth.uid == resource.data.recipientId;
@@ -64,16 +34,8 @@ service cloud.firestore {
     // 3. Donor Responses & Commitments Collection
     match /responses/{responseId} {
       allow read: if isAuthenticated();
-
-      allow create: if isAuthenticated() 
-        && request.resource.data.donorId == request.auth.uid
-        && (request.resource.data.requestId is string)
-        && (request.resource.data.pledgedQuantity is string && request.resource.data.pledgedQuantity.size() <= 250)
-        && (request.resource.data.deliveryDate is string && request.resource.data.deliveryDate.size() <= 200)
-        && (request.resource.data.donorNotes is string && request.resource.data.donorNotes.size() <= 1500);
-
-      allow delete: if isAuthenticated() && request.auth.uid == resource.data.donorId;
-      allow update: if isAuthenticated() && request.auth.uid == resource.data.donorId;
+      allow create: if isAuthenticated() && request.resource.data.donorId == request.auth.uid;
+      allow delete, update: if isAuthenticated() && request.auth.uid == resource.data.donorId;
     }
 
   }
