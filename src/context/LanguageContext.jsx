@@ -157,6 +157,11 @@ const TRANSLATIONS = {
 
     // Request Detail Modal & Full/Partial Pledging
     requestDetailTitle: 'تفاصيل طلب المساعدة',
+    tabOverview: 'نظرة عامة والاتصال',
+    tabLocationMap: 'الموقع والخريطة',
+    tabCommitPledge: 'التكفل بالمهمة',
+    openInExternalMaps: 'فتح في خرائط Google',
+    callCharityBtn: 'اتصال هاتفي مباشر',
     charityContactSection: 'معلومات الجمعية للتواصل المباشر',
     charityPhoneLabel: 'رقم هاتف الجمعية المباشر:',
     directCallTip: 'يمكنك الاتصال مباشرة للاستفسار والسؤال عن تفاصيل المساعدة:',
@@ -174,7 +179,7 @@ const TRANSLATIONS = {
     partialAidBadge: 'تكفل جزئي',
     remainingNeededTag: 'المتبقي المطلوب:',
     fullCoverageBadge: 'تغطية كاملة',
-    confirmPledgeActionBtn: 'أؤكد التزامي بتقديم هذه المساعدة',
+    confirmPledgeActionBtn: 'التكفل بهذا الطلب الآن',
     pledgeFormQtyPlaceholder: 'مثال: سأوفر 30 طرد غذائي / 15 بطانية',
     pledgeFormDatePlaceholder: 'مثال: يوم السبت القادم بعد الزوال',
     pledgeFormNotesPlaceholder: 'مثال: سنقوم بنقل المساعدات بسيارتنا إلى مقر الجمعية',
@@ -187,9 +192,13 @@ const TRANSLATIONS = {
     alreadyPledgedMsg: 'تم إشعار الجمعية بالتزامك. يرجى التواصل معهم هاتفياً للتنسيق والتسليم.',
     fulfilledNotice: 'تم تلبية هذا الاحتياج بالكامل. شكراً لجميع المحسنين.',
 
-    // Post Request Modal
+    // Post Request Modal 2-Step Wizard
     postModalTitleNew: 'نشر احتياج مساعدة جديد',
     postModalTitleEdit: 'تعديل طلب المساعدة',
+    stepNeedDetails: '1. تفاصيل الاحتياج',
+    stepLocationContact: '2. الموقع والاتصال',
+    nextStep: 'المتابعة للخطوة التالية',
+    prevStep: 'الخطوة السابقة',
     needDescLabel: 'تفاصيل الاحتياج المطلوب بدقة *',
     needDescPlaceholder: 'اكتب هنا ما تحتاجه الجمعية... مثال: نحتاج 30 طرد غذائي يحتوي على زيت، سكر ودقيق.',
     aidCategoryLabel: 'نوع المساعدة *',
@@ -390,6 +399,11 @@ const TRANSLATIONS = {
 
     // Request Detail Modal & Full/Partial Pledging
     requestDetailTitle: 'Aid Request Details',
+    tabOverview: 'Overview & Call',
+    tabLocationMap: 'Location & Map',
+    tabCommitPledge: 'Commit to Aid',
+    openInExternalMaps: 'Open in Google Maps',
+    callCharityBtn: 'Direct Phone Call',
     charityContactSection: 'Charity Direct Contact Details',
     charityPhoneLabel: 'Charity Coordinator Phone:',
     directCallTip: 'You can call the charity directly to inquire before making your commitment:',
@@ -407,7 +421,7 @@ const TRANSLATIONS = {
     partialAidBadge: 'Partial Aid',
     remainingNeededTag: 'Remaining Needed:',
     fullCoverageBadge: 'Full Coverage',
-    confirmPledgeActionBtn: 'I Commit to Fulfilling this Request',
+    confirmPledgeActionBtn: 'Commit to this Request Now',
     pledgeFormQtyPlaceholder: 'e.g. We will provide 30 full food packs / 15 blankets',
     pledgeFormDatePlaceholder: 'e.g. Next Saturday afternoon',
     pledgeFormNotesPlaceholder: 'e.g. We will deliver the supplies in our van directly to the charity center',
@@ -420,9 +434,13 @@ const TRANSLATIONS = {
     alreadyPledgedMsg: 'The charity has been notified. Please contact them by phone to coordinate delivery.',
     fulfilledNotice: 'This request has been completely fulfilled. Thank you to all donors.',
 
-    // Post Request Modal
+    // Post Request Modal 2-Step Wizard
     postModalTitleNew: 'Post New Aid Request',
     postModalTitleEdit: 'Edit Aid Request',
+    stepNeedDetails: '1. Need Details',
+    stepLocationContact: '2. Location & Contact',
+    nextStep: 'Continue to Next Step',
+    prevStep: 'Previous Step',
     needDescLabel: 'Detailed Description of Needed Supplies *',
     needDescPlaceholder: 'Describe exact supplies needed... e.g. 30 food parcels containing oil, flour, sugar for vulnerable families before winter.',
     aidCategoryLabel: 'Aid Category *',

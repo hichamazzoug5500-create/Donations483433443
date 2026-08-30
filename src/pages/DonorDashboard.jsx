@@ -278,34 +278,67 @@ export const DonorDashboard = () => {
         <div className="space-y-4">
           
           {/* Search & Filter Controls */}
-          <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs space-y-3">
+          <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-slate-200 shadow-xs space-y-3">
+            
+            {/* Search Input */}
             <div className="relative">
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3 rtl:right-3 rtl:left-auto" />
+              <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5 rtl:right-3.5 rtl:left-auto" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder={t('searchPlaceholder')}
-                className="w-full pl-9 pr-3.5 rtl:pr-9 rtl:pl-3.5 py-2.5 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-700 outline-none min-h-[42px]"
+                className="w-full pl-10 pr-4 rtl:pr-10 rtl:pl-4 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm focus:ring-2 focus:ring-emerald-700 outline-none min-h-[44px]"
               />
               {searchQuery && (
                 <button
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-3 rtl:left-3 rtl:right-auto text-slate-400"
+                  className="absolute right-3.5 top-3.5 rtl:left-3.5 rtl:right-auto text-slate-400 hover:text-slate-600 p-0.5"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1 border-t border-slate-100">
+            {/* 🌟 Fast Swipeable Category Chips 🌟 */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar pt-1">
+              {[
+                { id: 'all', label: isRTL ? 'جميع الأصناف' : 'All Categories', icon: Package },
+                { id: 'food', label: t('catFood'), icon: Utensils },
+                { id: 'clothing', label: t('catClothing'), icon: Shirt },
+                { id: 'medical', label: t('catMedical'), icon: Stethoscope },
+                { id: 'shelter', label: t('catShelter'), icon: Home },
+                { id: 'other', label: t('catOther'), icon: Package }
+              ].map(cat => {
+                const Icon = cat.icon;
+                const isSelected = selectedCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap shrink-0 transition-all min-h-[36px] ${
+                      isSelected
+                        ? 'bg-emerald-800 text-white shadow-xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    <Icon className="w-3.5 h-3.5" />
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Wilaya & Urgency Dropdowns */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 border-t border-slate-100">
               
               {/* Wilaya Filter */}
               <div>
                 <select
                   value={selectedWilaya}
                   onChange={(e) => setSelectedWilaya(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white font-medium min-h-[40px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 bg-white font-medium min-h-[42px] outline-none focus:ring-2 focus:ring-emerald-700"
                 >
                   <option value="all">{t('filterWilaya')}</option>
                   {ALGERIA_WILAYAS.map(w => (
@@ -316,28 +349,12 @@ export const DonorDashboard = () => {
                 </select>
               </div>
 
-              {/* Category Filter */}
-              <div>
-                <select
-                  value={selectedCategory}
-                  onChange={(e) => setSelectedCategory(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white font-medium min-h-[40px]"
-                >
-                  <option value="all">{t('filterCategory')}</option>
-                  <option value="food">{t('catFood')}</option>
-                  <option value="clothing">{t('catClothing')}</option>
-                  <option value="medical">{t('catMedical')}</option>
-                  <option value="shelter">{t('catShelter')}</option>
-                  <option value="other">{t('catOther')}</option>
-                </select>
-              </div>
-
               {/* Urgency Filter */}
               <div>
                 <select
                   value={selectedUrgency}
                   onChange={(e) => setSelectedUrgency(e.target.value)}
-                  className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs text-slate-700 bg-white font-medium min-h-[40px]"
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 text-xs sm:text-sm text-slate-700 bg-white font-medium min-h-[42px] outline-none focus:ring-2 focus:ring-emerald-700"
                 >
                   <option value="all">{t('filterUrgency')}</option>
                   <option value="high">{t('urgencyHigh')}</option>
@@ -347,6 +364,21 @@ export const DonorDashboard = () => {
               </div>
 
             </div>
+
+            {/* Active filters reset bar */}
+            {(searchQuery || selectedWilaya !== 'all' || selectedCategory !== 'all' || selectedUrgency !== 'all') && (
+              <div className="flex items-center justify-between pt-1 text-xs text-slate-500">
+                <span>{filteredOpenRequests.length} {isRTL ? 'طلب مطابق للبحث' : 'matching requests'}</span>
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="text-emerald-800 hover:text-emerald-900 font-bold hover:underline"
+                >
+                  {t('resetFilters')}
+                </button>
+              </div>
+            )}
+
           </div>
 
           {/* Open Needs Feed / Map */}
