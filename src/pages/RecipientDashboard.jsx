@@ -17,7 +17,9 @@ import {
   PhoneCall,
   Calendar,
   PackageCheck,
-  Trash2
+  Trash2,
+  Copy,
+  Phone
 } from 'lucide-react';
 
 export const RecipientDashboard = () => {
@@ -30,7 +32,7 @@ export const RecipientDashboard = () => {
   const [isPostModalOpen, setIsPostModalOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState(null);
   const [donorResponsesMap, setDonorResponsesMap] = useState({});
-  const [selectedResponseReqId, setSelectedResponseReqId] = useState(null);
+  const [copiedPhoneId, setCopiedPhoneId] = useState(null);
 
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState({
@@ -71,6 +73,15 @@ export const RecipientDashboard = () => {
     }
   }, [requests, userProfile]);
 
+  const handleCopyPhone = (phone, id) => {
+    if (phone) {
+      navigator.clipboard.writeText(phone);
+      setCopiedPhoneId(id);
+      setTimeout(() => setCopiedPhoneId(null), 2000);
+      showSuccess('تم نسخ رقم الهاتف!');
+    }
+  };
+
   const handleEdit = (request) => {
     setEditingRequest(request);
     setIsPostModalOpen(true);
@@ -82,7 +93,7 @@ export const RecipientDashboard = () => {
       isOpen: true,
       title: willFulfill ? 'تعليم الطلب كمكتمل؟' : 'إعادة فتح الطلب؟',
       message: willFulfill 
-        ? 'هل تم استلام المساعدات وتلبية هذا الاحتياج بالفعل؟'
+        ? 'هل تم استلام المساعدات وتلبية هذا الاحتياج بالفعل من المتبرع؟'
         : 'سيتم إعادة عرض هذا الطلب في قائمة الاحتياجات المفتوحة للمتبرعين.',
       isDestructive: false,
       onConfirm: async () => {
@@ -125,20 +136,20 @@ export const RecipientDashboard = () => {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 pb-24 md:pb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 space-y-5 pb-24 md:pb-12">
       
       {/* Dashboard Banner */}
-      <div className="bg-slate-900 rounded-2xl p-5 sm:p-7 text-white shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="space-y-1.5">
-          <span className="bg-amber-400 text-slate-950 text-[11px] font-bold px-2.5 py-0.5 rounded-md uppercase tracking-wider">
+      <div className="bg-slate-900 rounded-2xl p-4 sm:p-6 text-white shadow-xs flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+        <div className="space-y-1">
+          <span className="bg-amber-400 text-slate-950 text-[11px] font-extrabold px-2 py-0.5 rounded-md uppercase tracking-wider">
             لوحة قيادة الجمعية
           </span>
-          <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+          <h1 className="text-lg sm:text-2xl font-bold flex items-center gap-2">
             <Building2 className="w-5 h-5 text-amber-300 shrink-0" />
             <span>{userProfile?.orgName || 'الجمعية'}</span>
           </h1>
           <p className="text-slate-300 text-xs">
-            {userProfile?.city} • رقم الهاتف المعتمد: <span className="dir-ltr inline-block font-bold">{userProfile?.phone}</span>
+            {userProfile?.city} • هاتف الجمعية: <span className="dir-ltr inline-block font-bold">{userProfile?.phone}</span>
           </p>
         </div>
 
@@ -155,43 +166,43 @@ export const RecipientDashboard = () => {
       {loadingRequests ? (
         <DashboardStatsSkeleton />
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-4">
-          <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3.5">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
               <span className="text-[11px] text-slate-500 font-bold block">إجمالي الطلبات</span>
               <div className="text-xl sm:text-2xl font-extrabold text-slate-900 mt-0.5">{ownRequests.length}</div>
             </div>
-            <div className="p-2 sm:p-2.5 bg-slate-100 text-slate-700 rounded-lg">
+            <div className="p-2 bg-slate-100 text-slate-700 rounded-lg">
               <Clock className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
               <span className="text-[11px] text-slate-500 font-bold block">مفتوحة للمساعدة</span>
               <div className="text-xl sm:text-2xl font-extrabold text-emerald-800 mt-0.5">{openCount}</div>
             </div>
-            <div className="p-2 sm:p-2.5 bg-emerald-50 text-emerald-800 rounded-lg">
+            <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg">
               <HelpingHand className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
               <span className="text-[11px] text-slate-500 font-bold block">قيد التكفل</span>
               <div className="text-xl sm:text-2xl font-extrabold text-amber-600 mt-0.5">{inProgressCount}</div>
             </div>
-            <div className="p-2 sm:p-2.5 bg-amber-50 text-amber-800 rounded-lg">
+            <div className="p-2 bg-amber-50 text-amber-800 rounded-lg">
               <PackageCheck className="w-4 h-4" />
             </div>
           </div>
 
-          <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
+          <div className="bg-white p-3 sm:p-4 rounded-xl border border-slate-200 shadow-xs flex items-center justify-between">
             <div>
               <span className="text-[11px] text-slate-500 font-bold block">مكتملة</span>
               <div className="text-xl sm:text-2xl font-extrabold text-emerald-800 mt-0.5">{fulfilledCount}</div>
             </div>
-            <div className="p-2 sm:p-2.5 bg-emerald-50 text-emerald-800 rounded-lg">
+            <div className="p-2 bg-emerald-50 text-emerald-800 rounded-lg">
               <CheckCircle className="w-4 h-4" />
             </div>
           </div>
@@ -257,6 +268,7 @@ export const RecipientDashboard = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
           {filteredRequests.map((req) => {
             const responsesForThisReq = donorResponsesMap[req.requestId] || [];
+            const latestCommitment = responsesForThisReq[0] || null;
 
             return (
               <div key={req.requestId} className="space-y-2.5">
@@ -276,76 +288,81 @@ export const RecipientDashboard = () => {
                   </button>
                 </div>
 
-                {/* Assigned Donor Commitment Info */}
-                {req.assignedDonorName && (
-                  <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs space-y-1.5">
-                    <div className="flex items-center justify-between text-amber-950 font-bold">
-                      <span className="flex items-center gap-1.5">
-                        <PackageCheck className="w-4 h-4 text-amber-600" />
-                        <span>جهة متبرعة ملتزمة بالتكفل:</span>
+                {/* 🌟 PROMINENT COMMITTED DONOR CONTACT BOX 🌟 */}
+                {(req.assignedDonorName || req.status === 'in_progress') && (
+                  <div className="bg-emerald-50 border-2 border-emerald-400 rounded-2xl p-3.5 sm:p-4 text-xs space-y-3 shadow-xs">
+                    
+                    <div className="flex items-center justify-between">
+                      <span className="flex items-center gap-1.5 font-extrabold text-emerald-950 text-xs sm:text-sm">
+                        <PackageCheck className="w-4 h-4 text-emerald-700" />
+                        <span>معلومات المتبرع المتكفل:</span>
                       </span>
-                      <span className="bg-amber-200 text-amber-900 px-2 py-0.5 rounded-md text-[10px]">
-                        جاري التنسيق
+                      <span className="bg-emerald-200 text-emerald-950 px-2 py-0.5 rounded-full text-[10px] font-bold">
+                        ملتزم بالتكفل
                       </span>
                     </div>
 
-                    <div className="bg-white p-2.5 rounded-lg border border-amber-100 space-y-1">
-                      <div className="font-bold text-slate-900 text-xs sm:text-sm">{req.assignedDonorName}</div>
-                      {req.assignedDonorPhone && (
-                        <div className="flex items-center gap-1.5 text-slate-600 text-xs">
-                          <PhoneCall className="w-3 h-3 text-emerald-600" />
-                          <a href={`tel:${req.assignedDonorPhone}`} className="dir-ltr text-emerald-800 font-bold hover:underline">
-                            {req.assignedDonorPhone}
-                          </a>
+                    <div className="bg-white p-3 rounded-xl border border-emerald-200 space-y-2">
+                      
+                      {/* Donor Name */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-slate-500 text-[11px]">اسم المتبرع / الجهة:</span>
+                        <span className="font-extrabold text-slate-900 text-sm">
+                          {req.assignedDonorName || latestCommitment?.donorOrgName || 'متبرع مسجل'}
+                        </span>
+                      </div>
+
+                      {/* Donor Phone */}
+                      {(req.assignedDonorPhone || latestCommitment?.donorPhone) && (
+                        <div className="flex items-center justify-between pt-1 border-t border-slate-100">
+                          <span className="text-slate-500 text-[11px]">رقم هاتف المتبرع:</span>
+                          <span className="font-extrabold text-slate-900 text-sm dir-ltr">
+                            {req.assignedDonorPhone || latestCommitment?.donorPhone}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Pledged quantity / notes if available */}
+                      {latestCommitment?.pledgedQuantity && (
+                        <div className="flex items-center justify-between text-[11px] text-slate-600 pt-1 border-t border-slate-100">
+                          <span>الكمية المتعهد بها:</span>
+                          <span className="font-bold text-emerald-900">{latestCommitment.pledgedQuantity}</span>
+                        </div>
+                      )}
+
+                      {latestCommitment?.deliveryDate && (
+                        <div className="flex items-center justify-between text-[11px] text-slate-600">
+                          <span>موعد التسليم المقترح:</span>
+                          <span className="font-bold text-slate-800">{latestCommitment.deliveryDate}</span>
                         </div>
                       )}
                     </div>
-                  </div>
-                )}
 
-                {/* Donors Reached Out / Response History */}
-                {responsesForThisReq.length > 0 && !req.assignedDonorName && (
-                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs space-y-2">
-                    <div className="flex items-center justify-between text-emerald-950 font-bold">
-                      <span className="flex items-center gap-1.5">
-                        <Users className="w-4 h-4 text-emerald-700" />
-                        <span>{responsesForThisReq.length} جهة أبدت التزاماً</span>
-                      </span>
-                      <button 
-                        onClick={() => setSelectedResponseReqId(selectedResponseReqId === req.requestId ? null : req.requestId)}
-                        className="text-emerald-800 underline font-bold text-[11px]"
-                      >
-                        {selectedResponseReqId === req.requestId ? 'إخفاء' : 'عرض التفاصيل'}
-                      </button>
-                    </div>
+                    {/* 1-Tap Action Buttons (Call Now & Copy Number) */}
+                    {(req.assignedDonorPhone || latestCommitment?.donorPhone) && (
+                      <div className="grid grid-cols-2 gap-2 pt-0.5">
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPhone(req.assignedDonorPhone || latestCommitment?.donorPhone, req.requestId)}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-white hover:bg-slate-50 border border-emerald-300 text-emerald-900 font-bold rounded-xl text-xs min-h-[42px] transition-colors"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                          <span>{copiedPhoneId === req.requestId ? 'تم النسخ!' : 'نسخ الرقم'}</span>
+                        </button>
 
-                    {selectedResponseReqId === req.requestId && (
-                      <div className="space-y-2 pt-1.5 border-t border-emerald-200/60">
-                        {responsesForThisReq.map((resp, idx) => (
-                          <div key={resp.responseId || idx} className="bg-white p-2.5 rounded-lg border border-emerald-100 text-slate-800 space-y-1">
-                            <div className="font-bold text-emerald-900 text-xs">{resp.donorOrgName}</div>
-                            <div className="flex items-center gap-1.5 text-slate-600 text-xs">
-                              <PhoneCall className="w-3 h-3 text-emerald-600" />
-                              <a href={`tel:${resp.donorPhone}`} className="dir-ltr text-emerald-800 font-semibold hover:underline">
-                                {resp.donorPhone}
-                              </a>
-                            </div>
-                            {resp.pledgedQuantity && (
-                              <div className="text-[11px] text-slate-500">
-                                الكمية: <span className="font-bold text-slate-700">{resp.pledgedQuantity}</span>
-                              </div>
-                            )}
-                            {resp.deliveryDate && (
-                              <div className="text-[11px] text-slate-500">
-                                الموعد: <span className="font-bold text-slate-700">{resp.deliveryDate}</span>
-                              </div>
-                            )}
-                          </div>
-                        ))}
+                        <a
+                          href={`tel:${req.assignedDonorPhone || latestCommitment?.donorPhone}`}
+                          className="flex items-center justify-center gap-1.5 px-3 py-2.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold rounded-xl text-xs shadow-xs min-h-[42px] transition-colors"
+                        >
+                          <PhoneCall className="w-3.5 h-3.5" />
+                          <span>اتصال بالمتبرع</span>
+                        </a>
                       </div>
                     )}
+
                   </div>
                 )}
+
               </div>
             );
           })}
