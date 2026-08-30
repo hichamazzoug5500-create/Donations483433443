@@ -6,15 +6,22 @@
   html {
     -webkit-tap-highlight-color: transparent;
     font-family: 'Cairo', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    overflow-x: hidden;
+    width: 100%;
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
   }
+  
   body {
-    @apply bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased selection:bg-teal-600 selection:text-white;
+    @apply bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased selection:bg-emerald-800 selection:text-white;
     font-family: 'Cairo', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    /* Safe padding for bottom nav on mobile */
+    overflow-x: hidden;
+    width: 100%;
+    /* Safe padding for bottom navigation bar on mobile notches */
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Prevent automatic text zoom on mobile inputs */
+  /* Prevent automatic text zoom on mobile inputs (iOS/Android) */
   input, select, textarea {
     font-size: 16px !important;
   }
@@ -25,23 +32,37 @@
   }
 }
 
-/* Custom scrollbars */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: #f1f5f9;
-}
-::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 6px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none;  /* IE and Edge */
+    scrollbar-width: none;  /* Firefox */
+  }
 }
 
-/* Leaflet z-index fix */
+/* Custom scrollbars for desktop */
+@media (min-width: 640px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #f1f5f9;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 6px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+}
+
+/* Leaflet map container mobile fix */
 .leaflet-container {
   width: 100%;
   height: 100%;

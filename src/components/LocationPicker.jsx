@@ -62,7 +62,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
 
   // Handle map click or coordinate update
   const handleSelectCoords = async (latitude, longitude) => {
-    setStatusMsg({ type: 'info', text: t('locating') });
+    setStatusMsg({ type: 'info', text: 'جاري تحديد العنوان...' });
     const geocodeResult = await reverseGeocode(latitude, longitude);
     
     onChange({
@@ -72,19 +72,19 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
       address: geocodeResult?.address || address || ''
     });
 
-    setStatusMsg({ type: 'success', text: t('locationFound') });
+    setStatusMsg({ type: 'success', text: 'تم تحديد الإحداثيات بنجاح!' });
     setTimeout(() => setStatusMsg({ type: '', text: '' }), 3000);
   };
 
   // GPS Auto-Detection button handler
   const handleGPSDetect = () => {
     if (!navigator.geolocation) {
-      setStatusMsg({ type: 'error', text: t('locationError') });
+      setStatusMsg({ type: 'error', text: 'خاصية الموقع غير مدعومة على هذا الجهاز.' });
       return;
     }
 
     setIsLocatingGPS(true);
-    setStatusMsg({ type: 'info', text: t('locating') });
+    setStatusMsg({ type: 'info', text: 'جاري تحديد موقعك الحالي...' });
 
     navigator.geolocation.getCurrentPosition(
       async (position) => {
@@ -94,7 +94,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
       },
       (error) => {
         console.error("GPS detection error:", error);
-        setStatusMsg({ type: 'error', text: t('locationError') });
+        setStatusMsg({ type: 'error', text: 'تعذر الحصول على الموقع تلقائياً. يمكنك النقر على الخريطة.' });
         setIsLocatingGPS(false);
       },
       { timeout: 10000, enableHighAccuracy: true }
@@ -110,7 +110,6 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
     setSearchResults([]);
 
     try {
-      // Append Algeria to prioritize local Algerian search results
       const queryWithCountry = `${searchQuery.trim()}, Algeria`;
       const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(queryWithCountry)}&limit=5&accept-language=${isRTL ? 'ar' : 'en'}`);
       const data = await res.json();
@@ -136,16 +135,16 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
 
     setSearchResults([]);
     setSearchQuery('');
-    setStatusMsg({ type: 'success', text: t('locationFound') });
+    setStatusMsg({ type: 'success', text: 'تم تعيين العنوان بنجاح!' });
     setTimeout(() => setStatusMsg({ type: '', text: '' }), 3000);
   };
 
   return (
-    <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">
+    <div className="space-y-2.5 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-xs font-bold uppercase text-slate-700 flex items-center gap-1.5">
-          <MapPin className="w-4 h-4 text-teal-600" />
-          <span>{t('clickMapToPick')}</span>
+        <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+          <MapPin className="w-3.5 h-3.5 text-emerald-800" />
+          <span>تحديد المكان على الخريطة:</span>
         </span>
 
         {/* Free GPS Auto Location Button */}
@@ -153,53 +152,53 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
           type="button"
           onClick={handleGPSDetect}
           disabled={isLocatingGPS}
-          className="flex items-center gap-1.5 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-sm transition-colors"
+          className="flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold text-xs px-3 py-1.5 rounded-lg shadow-xs transition-colors min-h-[36px]"
         >
           {isLocatingGPS ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
-          <span>{t('useGPS')}</span>
+          <span>موقعي الحالي (GPS)</span>
         </button>
       </div>
 
       {statusMsg.text && (
         <div className={`p-2 rounded-lg text-xs font-semibold flex items-center gap-1.5 ${
-          statusMsg.type === 'success' ? 'bg-emerald-100 text-emerald-800' :
-          statusMsg.type === 'error' ? 'bg-rose-100 text-rose-800' : 'bg-blue-100 text-blue-800'
+          statusMsg.type === 'success' ? 'bg-emerald-100 text-emerald-900' :
+          statusMsg.type === 'error' ? 'bg-red-100 text-red-900' : 'bg-slate-200 text-slate-800'
         }`}>
-          {statusMsg.type === 'success' ? <CheckCircle className="w-4 h-4" /> : <AlertCircle className="w-4 h-4" />}
+          {statusMsg.type === 'success' ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
           <span>{statusMsg.text}</span>
         </div>
       )}
 
       {/* Free Address Search Bar */}
       <div className="relative">
-        <form onSubmit={handleOSMSearch} className="flex items-center gap-2">
+        <form onSubmit={handleOSMSearch} className="flex items-center gap-1.5">
           <div className="relative flex-grow">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 rtl:right-3 rtl:left-auto" />
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5 rtl:right-3 rtl:left-auto" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('searchAddressOSM')}
-              className="w-full pl-9 pr-3 rtl:pr-9 rtl:pl-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-teal-500 outline-none"
+              placeholder="ابحث عن الحي أو الشارع في الجزائر..."
+              className="w-full pl-8 pr-3 rtl:pr-8 rtl:pl-3 py-2 rounded-lg border border-slate-300 text-xs bg-white focus:ring-2 focus:ring-emerald-700 outline-none min-h-[38px]"
             />
           </div>
           <button
             type="submit"
             disabled={isSearchingOSM}
-            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg transition-colors shrink-0"
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-lg transition-colors shrink-0 min-h-[38px]"
           >
-            {isSearchingOSM ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : t('home')}
+            {isSearchingOSM ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : 'بحث'}
           </button>
         </form>
 
         {searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white rounded-lg border border-slate-200 shadow-xl max-h-48 overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white rounded-xl border border-slate-200 shadow-xl max-h-44 overflow-y-auto">
             {searchResults.map((item, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => handleSelectSearchResult(item)}
-                className="w-full text-left rtl:text-right px-3 py-2 text-xs hover:bg-teal-50 border-b border-slate-100 transition-colors block text-slate-800 truncate"
+                className="w-full text-left rtl:text-right px-3 py-2 text-xs hover:bg-emerald-50 border-b border-slate-100 transition-colors block text-slate-800 truncate"
               >
                 {item.display_name}
               </button>
@@ -209,7 +208,7 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
       </div>
 
       {/* Leaflet Map Picker */}
-      <div className="h-52 w-full rounded-lg overflow-hidden border border-slate-300 relative shadow-inner">
+      <div className="h-44 sm:h-52 w-full rounded-xl overflow-hidden border border-slate-300 relative shadow-inner">
         <MapContainer
           center={[currentLat, currentLng]}
           zoom={12}
@@ -226,9 +225,9 @@ export const LocationPicker = ({ lat, lng, city, address, onChange }) => {
         </MapContainer>
       </div>
 
-      <div className="grid grid-cols-2 gap-2 text-[11px] text-slate-500 font-mono">
-        <div>Lat: {currentLat.toFixed(5)}</div>
-        <div>Lng: {currentLng.toFixed(5)}</div>
+      <div className="grid grid-cols-2 gap-2 text-[10px] text-slate-500 font-mono">
+        <div>Lat: {currentLat.toFixed(4)}</div>
+        <div>Lng: {currentLng.toFixed(4)}</div>
       </div>
     </div>
   );
