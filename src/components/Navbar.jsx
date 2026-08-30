@@ -3,21 +3,23 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { 
-  HeartHandshake, 
   LogOut, 
   Menu, 
   X, 
   PlusCircle, 
-  Building2,
-  Globe,
-  Home,
-  LayoutGrid,
-  LogIn
+  Building2, 
+  Globe, 
+  Home, 
+  LayoutGrid, 
+  LogIn,
+  HeartHandshake,
+  User,
+  Package
 } from 'lucide-react';
 
 export const Navbar = ({ onOpenPostModal }) => {
   const { currentUser, userProfile, logout, role } = useAuth();
-  const { lang, toggleLanguage, t } = useLanguage();
+  const { lang, toggleLanguage } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -31,19 +33,22 @@ export const Navbar = ({ onOpenPostModal }) => {
     }
   };
 
+  const isCurrent = (path) => location.pathname === path;
+
   return (
     <>
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      {/* Sleek Top App Bar (52px on mobile, 60px on desktop) */}
+      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-13 sm:h-15">
             
             {/* Brand Logo */}
-            <Link to="/" className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-emerald-800 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+            <Link to="/" className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-white font-extrabold text-xs shadow-xs">
                 أمل
               </div>
               <div className="flex flex-col">
-                <span className="text-base sm:text-lg font-bold text-slate-900 leading-tight">
+                <span className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
                   منصة أمل الجزائر
                 </span>
                 <span className="text-[10px] text-slate-500 font-medium hidden sm:block">
@@ -56,7 +61,7 @@ export const Navbar = ({ onOpenPostModal }) => {
             <nav className="hidden md:flex items-center gap-6">
               <Link 
                 to="/" 
-                className={`text-xs font-bold transition-colors ${location.pathname === '/' ? 'text-emerald-800' : 'text-slate-600 hover:text-emerald-800'}`}
+                className={`text-xs font-bold transition-colors ${isCurrent('/') ? 'text-emerald-800 font-extrabold' : 'text-slate-600 hover:text-emerald-800'}`}
               >
                 الرئيسية
               </Link>
@@ -66,14 +71,14 @@ export const Navbar = ({ onOpenPostModal }) => {
                   {role === 'recipient' ? (
                     <Link 
                       to="/dashboard" 
-                      className={`text-xs font-bold transition-colors ${location.pathname === '/dashboard' ? 'text-emerald-800' : 'text-slate-600 hover:text-emerald-800'}`}
+                      className={`text-xs font-bold transition-colors ${isCurrent('/dashboard') ? 'text-emerald-800 font-extrabold' : 'text-slate-600 hover:text-emerald-800'}`}
                     >
                       لوحة قيادة الجمعية
                     </Link>
                   ) : (
                     <Link 
                       to="/donor" 
-                      className={`text-xs font-bold transition-colors ${location.pathname === '/donor' ? 'text-emerald-800' : 'text-slate-600 hover:text-emerald-800'}`}
+                      className={`text-xs font-bold transition-colors ${isCurrent('/donor') ? 'text-emerald-800 font-extrabold' : 'text-slate-600 hover:text-emerald-800'}`}
                     >
                       تصفح الاحتياجات
                     </Link>
@@ -82,196 +87,130 @@ export const Navbar = ({ onOpenPostModal }) => {
               )}
             </nav>
 
-            {/* Desktop Actions */}
-            <div className="hidden md:flex items-center gap-3">
+            {/* Top Right Desktop / Mobile Actions */}
+            <div className="flex items-center gap-2">
+              
+              {/* Language Switcher */}
               <button
                 onClick={toggleLanguage}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-semibold border border-slate-200"
+                className="flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold border border-slate-200 transition-colors min-h-[34px]"
               >
                 <Globe className="w-3.5 h-3.5 text-slate-500" />
                 <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
               </button>
 
+              {/* Desktop User Status / Auth Button */}
               {currentUser ? (
-                <div className="flex items-center gap-3">
+                <div className="hidden md:flex items-center gap-2.5 pr-2.5 border-r border-slate-200">
                   {role === 'recipient' && onOpenPostModal && (
                     <button
                       onClick={onOpenPostModal}
-                      className="flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs px-4 py-2 rounded-lg shadow-xs transition-all active:scale-95"
+                      className="flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-xs transition-all"
                     >
-                      <PlusCircle className="w-4 h-4" />
-                      <span>إضافة طلب مساعدة</span>
+                      <PlusCircle className="w-3.5 h-3.5" />
+                      <span>إضافة طلب</span>
                     </button>
                   )}
 
-                  <div className="flex items-center gap-2 pr-3 border-r border-slate-200">
-                    <div className="text-right">
-                      <div className="text-xs font-bold text-slate-900 flex items-center justify-end gap-1">
-                        <Building2 className="w-3 h-3 text-slate-400" />
-                        <span>{userProfile?.orgName || 'الجمعية'}</span>
-                      </div>
-                      <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
-                        role === 'recipient' ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'
-                      }`}>
-                        {role === 'recipient' ? 'جمعية محتاجة' : 'جهة متبرعة'}
-                      </span>
-                    </div>
-
-                    <button
-                      onClick={handleLogout}
-                      title="تسجيل الخروج"
-                      className="p-1.5 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                    </button>
+                  <div className="text-right">
+                    <span className="text-xs font-bold text-slate-900 block truncate max-w-[140px]">
+                      {userProfile?.orgName || 'حسابي'}
+                    </span>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                      role === 'recipient' ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'
+                    }`}>
+                      {role === 'recipient' ? 'جمعية' : 'متبرع'}
+                    </span>
                   </div>
+
+                  <button
+                    onClick={handleLogout}
+                    title="تسجيل الخروج"
+                    className="p-1.5 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                  </button>
                 </div>
               ) : (
                 <Link
                   to="/login"
-                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-lg shadow-xs transition-all flex items-center gap-1.5"
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-[11px] sm:text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs transition-all flex items-center gap-1 min-h-[34px]"
                 >
-                  <LogIn className="w-3.5 h-3.5" />
-                  <span>الدخول بحساب Google</span>
+                  <LogIn className="w-3 h-3" />
+                  <span>دخول عبر Google</span>
                 </Link>
               )}
-            </div>
 
-            {/* Mobile Actions */}
-            <div className="flex md:hidden items-center gap-2">
-              <button
-                onClick={toggleLanguage}
-                className="px-2 py-1 bg-slate-100 text-slate-800 rounded text-xs font-bold"
-              >
-                {lang === 'ar' ? 'EN' : 'عربي'}
-              </button>
-
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 text-slate-600 rounded-lg hover:bg-slate-100"
-              >
-                {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-              </button>
             </div>
 
           </div>
         </div>
-
-        {/* Mobile Dropdown */}
-        {mobileMenuOpen && (
-          <div className="md:hidden border-t border-slate-200 bg-white px-4 pt-3 pb-6 space-y-3">
-            <Link
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block py-2 text-sm font-bold text-slate-800"
-            >
-              الرئيسية
-            </Link>
-
-            {currentUser ? (
-              <>
-                {role === 'recipient' ? (
-                  <Link
-                    to="/dashboard"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block py-2 text-sm font-bold text-slate-800"
-                  >
-                    لوحة قيادة الجمعية
-                  </Link>
-                ) : (
-                  <Link
-                    to="/donor"
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="block py-2 text-sm font-bold text-slate-800"
-                  >
-                    تصفح الاحتياجات
-                  </Link>
-                )}
-
-                <div className="pt-3 border-t border-slate-200 space-y-2">
-                  <p className="text-xs font-bold text-slate-800">{userProfile?.orgName}</p>
-                  <button
-                    onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
-                    className="w-full flex items-center justify-center gap-2 py-2 px-3 bg-slate-100 text-slate-700 text-xs font-bold rounded-lg"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>تسجيل الخروج</span>
-                  </button>
-                </div>
-              </>
-            ) : (
-              <div className="pt-3 border-t border-slate-200">
-                <Link
-                  to="/login"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="block text-center py-2.5 bg-slate-900 text-white text-xs font-bold rounded-lg"
-                >
-                  الدخول بحساب Google
-                </Link>
-              </div>
-            )}
-          </div>
-        )}
       </header>
 
-      {/* Mobile Bottom Thumb Bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 md:hidden flex justify-around items-center h-14 px-2 shadow-md">
-        <Link
-          to="/"
-          className={`flex flex-col items-center justify-center w-full py-1 text-[11px] font-bold ${
-            location.pathname === '/' ? 'text-emerald-800' : 'text-slate-500'
-          }`}
-        >
-          <Home className="w-4 h-4 mb-0.5" />
-          <span>الرئيسية</span>
-        </Link>
-
-        {currentUser ? (
-          role === 'recipient' ? (
-            <>
-              <Link
-                to="/dashboard"
-                className={`flex flex-col items-center justify-center w-full py-1 text-[11px] font-bold ${
-                  location.pathname === '/dashboard' ? 'text-emerald-800' : 'text-slate-500'
-                }`}
-              >
-                <LayoutGrid className="w-4 h-4 mb-0.5" />
-                <span>لوحتي</span>
-              </Link>
-
-              {onOpenPostModal && (
-                <button
-                  onClick={onOpenPostModal}
-                  className="flex flex-col items-center justify-center w-full py-1 text-[11px] font-bold text-emerald-800"
-                >
-                  <PlusCircle className="w-5 h-5 mb-0.5" />
-                  <span>طلب مساعدة</span>
-                </button>
-              )}
-            </>
-          ) : (
-            <Link
-              to="/donor"
-              className={`flex flex-col items-center justify-center w-full py-1 text-[11px] font-bold ${
-                location.pathname === '/donor' ? 'text-emerald-800' : 'text-slate-500'
-              }`}
-            >
-              <LayoutGrid className="w-4 h-4 mb-0.5" />
-              <span>الاحتياجات</span>
-            </Link>
-          )
-        ) : (
+      {/* Native App-Style Bottom Tab Bar (Fixed at bottom on mobile) */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 md:hidden shadow-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+        <div className="flex justify-around items-center h-14 px-1 max-w-md mx-auto">
+          
+          {/* Tab 1: Home Feed */}
           <Link
-            to="/login"
-            className={`flex flex-col items-center justify-center w-full py-1 text-[11px] font-bold ${
-              location.pathname === '/login' ? 'text-emerald-800' : 'text-slate-500'
+            to="/"
+            className={`flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-colors ${
+              isCurrent('/') ? 'text-emerald-800' : 'text-slate-400 hover:text-slate-600'
             }`}
           >
-            <LogIn className="w-4 h-4 mb-0.5" />
-            <span>دخول</span>
+            <Home className="w-5 h-5 mb-0.5" />
+            <span>الرئيسية</span>
           </Link>
-        )}
-      </div>
+
+          {/* Tab 2: Needs Feed */}
+          <Link
+            to="/donor"
+            className={`flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-colors ${
+              isCurrent('/donor') ? 'text-emerald-800' : 'text-slate-400 hover:text-slate-600'
+            }`}
+          >
+            <Package className="w-5 h-5 mb-0.5" />
+            <span>الاحتياجات</span>
+          </Link>
+
+          {/* Tab 3: Post Need Action (Charity or Quick Trigger) */}
+          {role === 'recipient' && onOpenPostModal ? (
+            <button
+              onClick={onOpenPostModal}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold text-amber-600 active:scale-95 transition-transform"
+            >
+              <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center -mt-3 shadow-md border-2 border-white">
+                <PlusCircle className="w-5 h-5" />
+              </div>
+              <span className="mt-0.5">إضافة طلب</span>
+            </button>
+          ) : null}
+
+          {/* Tab 4: Dashboard / Profile */}
+          {currentUser ? (
+            <Link
+              to={role === 'recipient' ? '/dashboard' : '/donor'}
+              className={`flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-colors ${
+                isCurrent('/dashboard') || (isCurrent('/donor') && role === 'donor') ? 'text-emerald-800' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <LayoutGrid className="w-5 h-5 mb-0.5" />
+              <span>{role === 'recipient' ? 'لوحة جمعيتي' : 'التزاماتي'}</span>
+            </Link>
+          ) : (
+            <Link
+              to="/login"
+              className={`flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-colors ${
+                isCurrent('/login') ? 'text-emerald-800' : 'text-slate-400 hover:text-slate-600'
+              }`}
+            >
+              <User className="w-5 h-5 mb-0.5" />
+              <span>حسابي</span>
+            </Link>
+          )}
+
+        </div>
+      </nav>
     </>
   );
 };

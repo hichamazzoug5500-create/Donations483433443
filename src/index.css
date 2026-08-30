@@ -3,6 +3,11 @@
 @tailwind utilities;
 
 @layer base {
+  :root {
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+
   html {
     -webkit-tap-highlight-color: transparent;
     font-family: 'Cairo', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -17,8 +22,9 @@
     font-family: 'Cairo', 'Tajawal', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     overflow-x: hidden;
     width: 100%;
-    /* Safe padding for bottom navigation bar on mobile notches */
-    padding-bottom: env(safe-area-inset-bottom);
+    /* Prevent double scrollbars and unwanted horizontal shifts */
+    margin: 0;
+    padding: 0;
   }
 
   /* Prevent automatic text zoom on mobile inputs (iOS/Android) */
@@ -33,14 +39,18 @@
 }
 
 @layer utilities {
-  /* Hide scrollbar for Chrome, Safari and Opera */
+  /* Hide scrollbar for clean swipeable carousels */
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
-  /* Hide scrollbar for IE, Edge and Firefox */
   .no-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Mobile bottom bar safe space */
+  .pb-safe-nav {
+    padding-bottom: calc(4.25rem + env(safe-area-inset-bottom, 0px));
   }
 }
 
@@ -62,7 +72,7 @@
   }
 }
 
-/* Leaflet map container mobile fix */
+/* Leaflet map container mobile isolation */
 .leaflet-container {
   width: 100%;
   height: 100%;
