@@ -14,7 +14,10 @@ import {
   LogIn,
   HeartHandshake,
   User,
-  Package
+  Package,
+  MapPin,
+  HelpCircle,
+  Sparkles
 } from 'lucide-react';
 
 export const Navbar = ({ onOpenPostModal }) => {
@@ -37,34 +40,53 @@ export const Navbar = ({ onOpenPostModal }) => {
 
   return (
     <>
-      {/* Sleek Top App Bar (52px on mobile, 60px on desktop) */}
-      <header className="bg-white border-b border-slate-200/90 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-13 sm:h-15">
+      {/* Rich Civic Header */}
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
             
-            {/* Brand Logo */}
-            <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-emerald-800 flex items-center justify-center text-white font-extrabold text-xs shadow-xs">
+            {/* Brand Emblem & Name */}
+            <Link to="/" className="flex items-center gap-2.5 shrink-0">
+              <div className="w-10 h-10 rounded-xl bg-emerald-800 flex items-center justify-center text-white font-extrabold text-sm shadow-xs">
                 أمل
               </div>
               <div className="flex flex-col">
-                <span className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
-                  منصة أمل الجزائر
-                </span>
-                <span className="text-[10px] text-slate-500 font-medium hidden sm:block">
-                  شبكة التكافل الخيري والإنساني
+                <div className="flex items-center gap-1.5">
+                  <span className="text-base font-extrabold text-slate-900 tracking-tight">
+                    أمل الجزائر
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-100 text-emerald-900 rounded">
+                    تكافل وطني
+                  </span>
+                </div>
+                <span className="text-[11px] text-slate-500 font-medium">
+                  منصة التنسيق المباشر بين الجمعيات والمحسنين
                 </span>
               </div>
             </Link>
 
             {/* Desktop Navigation Links */}
-            <nav className="hidden md:flex items-center gap-6">
+            <nav className="hidden lg:flex items-center gap-7">
               <Link 
                 to="/" 
                 className={`text-xs font-bold transition-colors ${isCurrent('/') ? 'text-emerald-800 font-extrabold' : 'text-slate-600 hover:text-emerald-800'}`}
               >
                 الرئيسية
               </Link>
+
+              <a 
+                href="#needs-feed" 
+                className="text-xs font-bold text-slate-600 hover:text-emerald-800 transition-colors"
+              >
+                الاحتياجات المفتوحة
+              </a>
+
+              <a 
+                href="#how-it-works" 
+                className="text-xs font-bold text-slate-600 hover:text-emerald-800 transition-colors"
+              >
+                كيف تعمل المنصة؟
+              </a>
 
               {currentUser && (
                 <>
@@ -80,53 +102,66 @@ export const Navbar = ({ onOpenPostModal }) => {
                       to="/donor" 
                       className={`text-xs font-bold transition-colors ${isCurrent('/donor') ? 'text-emerald-800 font-extrabold' : 'text-slate-600 hover:text-emerald-800'}`}
                     >
-                      تصفح الاحتياجات
+                      التزاماتي بالمساعدة
                     </Link>
                   )}
                 </>
               )}
             </nav>
 
-            {/* Top Right Desktop / Mobile Actions */}
-            <div className="flex items-center gap-2">
+            {/* Right Side Header Controls */}
+            <div className="flex items-center gap-2.5">
               
+              {/* Post Need Button */}
+              <button
+                onClick={() => {
+                  if (!currentUser) {
+                    navigate('/login');
+                  } else if (onOpenPostModal) {
+                    onOpenPostModal();
+                  } else {
+                    navigate('/dashboard');
+                  }
+                }}
+                className="hidden sm:flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow-xs transition-all min-h-[38px]"
+              >
+                <PlusCircle className="w-4 h-4 text-emerald-300" />
+                <span>أنشر طلب مساعدة</span>
+              </button>
+
               {/* Language Switcher */}
               <button
                 onClick={toggleLanguage}
-                className="flex items-center gap-1 px-2 py-1 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-[11px] font-bold border border-slate-200 transition-colors min-h-[34px]"
+                className="flex items-center gap-1 px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-lg text-xs font-bold border border-slate-200 transition-colors min-h-[36px]"
               >
                 <Globe className="w-3.5 h-3.5 text-slate-500" />
                 <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
               </button>
 
-              {/* Desktop User Status / Auth Button */}
+              {/* User Account / Google Sign-in */}
               {currentUser ? (
-                <div className="hidden md:flex items-center gap-2.5 pr-2.5 border-r border-slate-200">
-                  {role === 'recipient' && onOpenPostModal && (
-                    <button
-                      onClick={onOpenPostModal}
-                      className="flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold text-xs px-3.5 py-1.5 rounded-lg shadow-xs transition-all"
-                    >
-                      <PlusCircle className="w-3.5 h-3.5" />
-                      <span>إضافة طلب</span>
-                    </button>
-                  )}
-
-                  <div className="text-right">
-                    <span className="text-xs font-bold text-slate-900 block truncate max-w-[140px]">
-                      {userProfile?.orgName || 'حسابي'}
-                    </span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
-                      role === 'recipient' ? 'bg-amber-100 text-amber-900' : 'bg-emerald-100 text-emerald-900'
-                    }`}>
-                      {role === 'recipient' ? 'جمعية' : 'متبرع'}
-                    </span>
-                  </div>
+                <div className="flex items-center gap-2 pr-2 border-r border-slate-200">
+                  <Link
+                    to={role === 'recipient' ? '/dashboard' : '/donor'}
+                    className="flex items-center gap-2 p-1 pl-2.5 rounded-xl hover:bg-slate-50 transition-colors border border-slate-200"
+                  >
+                    <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                      {userProfile?.orgName ? userProfile.orgName[0] : 'U'}
+                    </div>
+                    <div className="text-right hidden md:block">
+                      <span className="text-xs font-bold text-slate-900 block truncate max-w-[120px]">
+                        {userProfile?.orgName || 'حسابي'}
+                      </span>
+                      <span className="text-[10px] text-emerald-800 font-bold block">
+                        {role === 'recipient' ? 'جمعية خيرية' : 'محسن متبرع'}
+                      </span>
+                    </div>
+                  </Link>
 
                   <button
                     onClick={handleLogout}
                     title="تسجيل الخروج"
-                    className="p-1.5 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors"
+                    className="p-2 text-slate-400 hover:text-red-700 hover:bg-red-50 rounded-lg transition-colors min-h-[36px] min-w-[36px] flex items-center justify-center"
                   >
                     <LogOut className="w-4 h-4" />
                   </button>
@@ -134,10 +169,10 @@ export const Navbar = ({ onOpenPostModal }) => {
               ) : (
                 <Link
                   to="/login"
-                  className="bg-slate-900 hover:bg-slate-800 text-white text-[11px] sm:text-xs font-bold px-3 py-1.5 rounded-lg shadow-xs transition-all flex items-center gap-1 min-h-[34px]"
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-2 rounded-xl shadow-xs transition-all flex items-center gap-1.5 min-h-[36px]"
                 >
-                  <LogIn className="w-3 h-3" />
-                  <span>دخول عبر Google</span>
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>دخول Google</span>
                 </Link>
               )}
 
@@ -147,11 +182,11 @@ export const Navbar = ({ onOpenPostModal }) => {
         </div>
       </header>
 
-      {/* Native App-Style Bottom Tab Bar (Fixed at bottom on mobile) */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 md:hidden shadow-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
+      {/* Clean Bottom Tab Navigation for Mobile Devices */}
+      <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200 md:hidden shadow-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
         <div className="flex justify-around items-center h-14 px-1 max-w-md mx-auto">
           
-          {/* Tab 1: Home Feed */}
+          {/* Tab 1: Home */}
           <Link
             to="/"
             className={`flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-colors ${
@@ -173,29 +208,35 @@ export const Navbar = ({ onOpenPostModal }) => {
             <span>الاحتياجات</span>
           </Link>
 
-          {/* Tab 3: Post Need Action (Charity or Quick Trigger) */}
-          {role === 'recipient' && onOpenPostModal ? (
-            <button
-              onClick={onOpenPostModal}
-              className="flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold text-amber-600 active:scale-95 transition-transform"
-            >
-              <div className="w-8 h-8 rounded-full bg-amber-500 text-slate-950 flex items-center justify-center -mt-3 shadow-md border-2 border-white">
-                <PlusCircle className="w-5 h-5" />
-              </div>
-              <span className="mt-0.5">إضافة طلب</span>
-            </button>
-          ) : null}
+          {/* Tab 3: Post Need */}
+          <button
+            onClick={() => {
+              if (!currentUser) {
+                navigate('/login');
+              } else if (onOpenPostModal) {
+                onOpenPostModal();
+              } else {
+                navigate('/dashboard');
+              }
+            }}
+            className="flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold text-emerald-800 active:scale-95 transition-transform"
+          >
+            <div className="w-9 h-9 rounded-full bg-emerald-800 text-white flex items-center justify-center -mt-4 shadow-md border-2 border-white">
+              <PlusCircle className="w-5 h-5" />
+            </div>
+            <span className="mt-0.5">طلب مساعدة</span>
+          </button>
 
           {/* Tab 4: Dashboard / Profile */}
           {currentUser ? (
             <Link
               to={role === 'recipient' ? '/dashboard' : '/donor'}
               className={`flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold transition-colors ${
-                isCurrent('/dashboard') || (isCurrent('/donor') && role === 'donor') ? 'text-emerald-800' : 'text-slate-400 hover:text-slate-600'
+                isCurrent('/dashboard') || isCurrent('/donor') ? 'text-emerald-800' : 'text-slate-400 hover:text-slate-600'
               }`}
             >
               <LayoutGrid className="w-5 h-5 mb-0.5" />
-              <span>{role === 'recipient' ? 'لوحة جمعيتي' : 'التزاماتي'}</span>
+              <span>{role === 'recipient' ? 'لوحتي' : 'التزاماتي'}</span>
             </Link>
           ) : (
             <Link
@@ -205,7 +246,7 @@ export const Navbar = ({ onOpenPostModal }) => {
               }`}
             >
               <User className="w-5 h-5 mb-0.5" />
-              <span>حسابي</span>
+              <span>دخول</span>
             </Link>
           )}
 
