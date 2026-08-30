@@ -1,183 +1,242 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useData } from '../context/DataContext';
+import { useAuth } from '../context/AuthContext';
+import { useLanguage } from '../context/LanguageContext';
+import { RequestCard } from '../components/RequestCard';
+import { RequestDetailModal } from '../components/RequestDetailModal';
+import { MapView } from '../components/MapView';
+import { RequestCardSkeleton } from '../components/SkeletonLoader';
+import { ALGERIA_WILAYAS } from '../data/algeriaWilayas';
 import { 
   HelpingHand, 
   Gift, 
-  Utensils, 
-  Shirt, 
-  Stethoscope, 
-  Home, 
-  Package,
-  HeartHandshake,
-  Sparkles,
-  MapPin,
-  PhoneCall
+  Search, 
+  Filter, 
+  MapPin, 
+  List, 
+  Map as MapIcon, 
+  Building2,
+  PhoneCall,
+  CheckCircle2
 } from 'lucide-react';
-import { useLanguage } from '../context/LanguageContext';
 
 export const LandingPage = () => {
-  const { t } = useLanguage();
+  const { requests, loadingRequests } = useData();
+  const { currentUser, role: userRole } = useAuth();
+  const { isRTL } = useLanguage();
+  const navigate = useNavigate();
+
+  const [selectedCity, setSelectedCity] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [viewMode, setViewMode] = useState('grid');
+  const [activeRequestModal, setActiveRequestModal] = useState(null);
+
+  // Filter open & in-progress requests
+  const filteredRequests = requests.filter(req => {
+    if (req.status === 'fulfilled') return false;
+    
+    if (selectedCity !== 'all' && !req.location?.city?.includes(selectedCity)) {
+      return false;
+    }
+    if (selectedCategory !== 'all' && req.category !== selectedCategory) {
+      return false;
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      const matchDesc = req.needDescription?.toLowerCase().includes(q);
+      const matchOrg = req.orgName?.toLowerCase().includes(q);
+      const matchCity = req.location?.city?.toLowerCase().includes(q);
+      if (!matchDesc && !matchOrg && !matchCity) return false;
+    }
+    return true;
+  });
+
+  const openCount = requests.filter(r => r.status === 'open').length;
 
   return (
-    <div className="space-y-16 pb-16">
+    <div className="space-y-12 pb-16">
       
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-teal-900 via-teal-800 to-slate-900 text-white pt-16 pb-24 px-4 sm:px-6 lg:px-8">
-        
-        {/* Background glow */}
-        <div className="absolute inset-0 opacity-10 pointer-events-none">
-          <div className="absolute top-10 left-10 w-96 h-96 rounded-full bg-teal-300 blur-3xl"></div>
-          <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-emerald-400 blur-3xl"></div>
-        </div>
-
-        <div className="max-w-4xl mx-auto text-center space-y-8 relative z-10">
+      {/* Civic Editorial Header */}
+      <section className="bg-slate-900 text-white pt-14 pb-16 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
+        <div className="max-w-4xl mx-auto text-center space-y-6">
           
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-700/60 border border-teal-500/30 text-teal-200 text-xs font-semibold uppercase tracking-wider backdrop-blur">
-            <Sparkles className="w-4 h-4 text-amber-400" />
-            <span>{t('heroBadge')}</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-md bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 text-xs font-semibold">
+            شبكة التكافل الخيري والإنساني في الجزائر
           </div>
 
-          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight max-w-3xl mx-auto">
-            {t('heroTitle')}
+          <h1 className="text-3xl sm:text-5xl font-extrabold tracking-tight leading-tight">
+            منصة التنسيق المباشر بين الجمعيات والمحسنين
           </h1>
 
-          <p className="text-slate-200 text-base sm:text-lg max-w-2xl mx-auto font-normal leading-relaxed">
-            {t('heroSubtitle')}
+          <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed font-normal">
+            تتيح للجمعيات الخيرية والمبادرات الإنسانية في جميع الولايات نشر احتياجاتها العاجلة بدقة، وتمكّن المتبرعين من تقديم المساعدات والتكفل بها مباشرة دون وسيط.
           </p>
 
-          {/* Dual Action Hero Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Link
-              to="/signup?role=recipient"
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-base px-8 py-4 rounded-xl shadow-xl transition-all transform hover:-translate-y-0.5"
+          {/* Clean Action Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                if (currentUser) {
+                  navigate(userRole === 'recipient' ? '/dashboard' : '/donor');
+                } else {
+                  navigate('/login');
+                }
+              }}
+              className="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-sm px-6 py-3.5 rounded-xl shadow transition-all flex items-center justify-center gap-2 min-h-[46px]"
             >
-              <HelpingHand className="w-5 h-5" />
-              <span>{t('iNeedHelpCTA')}</span>
-            </Link>
+              <HelpingHand className="w-4 h-4" />
+              <span>طلب مساعدة لجمعية</span>
+            </button>
 
-            <Link
-              to="/signup?role=donor"
-              className="w-full sm:w-auto flex items-center justify-center gap-2.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-extrabold text-base px-8 py-4 rounded-xl shadow-xl transition-all transform hover:-translate-y-0.5"
+            <a
+              href="#needs-feed"
+              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white border border-white/20 font-bold text-sm px-6 py-3.5 rounded-xl transition-all flex items-center justify-center gap-2 min-h-[46px]"
             >
-              <Gift className="w-5 h-5" />
-              <span>{t('iWantToHelpCTA')}</span>
-            </Link>
+              <Gift className="w-4 h-4 text-emerald-400" />
+              <span>تصفح الاحتياجات الحالية ({openCount})</span>
+            </a>
           </div>
 
-          <p className="text-xs text-slate-400 flex items-center justify-center gap-1">
-            <span>{t('logIn')}?</span>
-            <Link to="/login" className="text-teal-300 font-semibold underline hover:text-white">
-              {t('logIn')}
-            </Link>
-          </p>
         </div>
       </section>
 
-      {/* How it works (Clean Human Flow) */}
-      <section className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
-        <div className="text-center space-y-2">
-          <span className="text-teal-600 font-bold text-xs uppercase tracking-widest">{t('brandSubtitle')}</span>
-          <h2 className="text-3xl font-bold text-slate-900">{t('howItWorksTitle')}</h2>
-          <p className="text-slate-600 text-sm max-w-xl mx-auto">
-            {t('howItWorksSub')}
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          
-          <div className="bg-white p-7 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-bold text-lg">
-              1
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">{t('step1Title')}</h3>
-            <p className="text-slate-600 text-xs leading-relaxed">
-              {t('step1Desc')}
+      {/* Live Needs Feed Section */}
+      <section id="needs-feed" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        
+        {/* Section Title & View Mode Toggle */}
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border-b border-slate-200 pb-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 flex items-center gap-2">
+              <span>الاحتياجات المفتوحة للمساعدات في الجزائر</span>
+              <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full">
+                {filteredRequests.length} طلب
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500 mt-0.5">
+              يمكن للمتبرعين والمحسنين الاتصال مباشرة بالجمعيات للتنسيق وتقديم العون
             </p>
           </div>
 
-          <div className="bg-white p-7 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-teal-100 text-teal-800 flex items-center justify-center font-bold text-lg">
-              2
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">{t('step2Title')}</h3>
-            <p className="text-slate-600 text-xs leading-relaxed">
-              {t('step2Desc')}
-            </p>
-          </div>
-
-          <div className="bg-white p-7 rounded-2xl border border-slate-200 shadow-sm space-y-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-800 flex items-center justify-center font-bold text-lg">
-              3
-            </div>
-            <h3 className="text-lg font-bold text-slate-900">{t('step3Title')}</h3>
-            <p className="text-slate-600 text-xs leading-relaxed">
-              {t('step3Desc')}
-            </p>
-          </div>
-
-        </div>
-      </section>
-
-      {/* Aid Categories Supported */}
-      <section className="bg-slate-100 py-12 px-4 sm:px-6 lg:px-8 border-y border-slate-200">
-        <div className="max-w-6xl mx-auto space-y-6">
-          <div className="text-center space-y-1">
-            <h2 className="text-2xl font-bold text-slate-900">{t('supportedCategories')}</h2>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-            <div className="bg-white p-5 rounded-xl border border-slate-200 text-center space-y-2">
-              <div className="p-2.5 bg-emerald-100 text-emerald-700 rounded-lg inline-block">
-                <Utensils className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-slate-800 text-xs">{t('catFood')}</h4>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200 text-center space-y-2">
-              <div className="p-2.5 bg-blue-100 text-blue-700 rounded-lg inline-block">
-                <Shirt className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-slate-800 text-xs">{t('catClothing')}</h4>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200 text-center space-y-2">
-              <div className="p-2.5 bg-rose-100 text-rose-700 rounded-lg inline-block">
-                <Stethoscope className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-slate-800 text-xs">{t('catMedical')}</h4>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200 text-center space-y-2">
-              <div className="p-2.5 bg-amber-100 text-amber-700 rounded-lg inline-block">
-                <Home className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-slate-800 text-xs">{t('catShelter')}</h4>
-            </div>
-
-            <div className="bg-white p-5 rounded-xl border border-slate-200 text-center space-y-2 col-span-2 sm:col-span-1">
-              <div className="p-2.5 bg-purple-100 text-purple-700 rounded-lg inline-block">
-                <Package className="w-5 h-5" />
-              </div>
-              <h4 className="font-bold text-slate-800 text-xs">{t('catOther')}</h4>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Direct CTA Box */}
-      <section className="max-w-4xl mx-auto px-4 sm:px-6">
-        <div className="bg-gradient-to-r from-teal-800 to-slate-900 rounded-2xl p-8 text-white text-center space-y-5 shadow-xl">
-          <h2 className="text-2xl font-extrabold">{t('heroTitle')}</h2>
-          <div className="flex justify-center gap-4 flex-wrap pt-2">
-            <Link
-              to="/signup"
-              className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-7 py-3 rounded-xl shadow-md transition-transform hover:scale-105"
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200">
+            <button
+              onClick={() => setViewMode('grid')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'grid' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
             >
-              {t('registerOrg')}
-            </Link>
+              <List className="w-4 h-4" />
+              <span>قائمة</span>
+            </button>
+            <button
+              onClick={() => setViewMode('map')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                viewMode === 'map' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <MapIcon className="w-4 h-4" />
+              <span>الخريطة</span>
+            </button>
           </div>
         </div>
+
+        {/* Filters Bar */}
+        <div className="bg-white p-4 rounded-xl border border-slate-200/90 shadow-sm space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3 rtl:right-3 rtl:left-auto" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="ابحث بالجمعية، الولاية، أو نوع الاحتياج..."
+                className="w-full pl-9 pr-3.5 rtl:pr-9 rtl:pl-3.5 py-2 rounded-lg border border-slate-200 text-xs focus:ring-2 focus:ring-emerald-600 outline-none"
+              />
+            </div>
+
+            {/* Wilaya Filter */}
+            <div>
+              <select
+                value={selectedCity}
+                onChange={(e) => setSelectedCity(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-emerald-600 outline-none font-medium"
+              >
+                <option value="all">جميع الولايات (58 ولاية)</option>
+                {ALGERIA_WILAYAS.map(w => (
+                  <option key={w.code} value={isRTL ? w.nameAr : w.nameEn}>
+                    {w.code} - {isRTL ? w.nameAr : w.nameEn}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Category Filter */}
+            <div>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full px-3 py-2 rounded-lg border border-slate-200 text-xs bg-white focus:ring-2 focus:ring-emerald-600 outline-none font-medium"
+              >
+                <option value="all">جميع فئات المساعدات</option>
+                <option value="food">مواد غذائية ومؤونة</option>
+                <option value="clothing">ألبسة وأغطية</option>
+                <option value="medical">مستلزمات طبية وأدوية</option>
+                <option value="shelter">مأوى وسكن مؤقت</option>
+                <option value="other">عام / أخرى</option>
+              </select>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Feed Content */}
+        {loadingRequests ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {[1, 2, 3, 4, 5, 6].map(i => <RequestCardSkeleton key={i} />)}
+          </div>
+        ) : viewMode === 'map' ? (
+          <div className="bg-white p-2 rounded-2xl border border-slate-200 shadow-sm overflow-hidden h-[500px]">
+            <MapView
+              requests={filteredRequests}
+              onSelectRequest={(req) => setActiveRequestModal(req)}
+            />
+          </div>
+        ) : filteredRequests.length === 0 ? (
+          <div className="bg-white rounded-2xl p-12 text-center space-y-3 border border-dashed border-slate-300">
+            <h3 className="text-base font-bold text-slate-800">لا توجد طلبات تطابق هذا البحث حالياً</h3>
+            <p className="text-xs text-slate-500">جرب اختيار ولاية أخرى أو إعادة تعيين الفلاتر</p>
+            <button
+              onClick={() => { setSelectedCity('all'); setSelectedCategory('all'); setSearchQuery(''); }}
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg"
+            >
+              إعادة ضبط الفلاتر
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredRequests.map(req => (
+              <RequestCard
+                key={req.requestId}
+                request={req}
+                onSelect={(selected) => setActiveRequestModal(selected)}
+              />
+            ))}
+          </div>
+        )}
+
       </section>
+
+      {/* Authentic Mission Details Modal */}
+      {activeRequestModal && (
+        <RequestDetailModal
+          request={activeRequestModal}
+          isOpen={Boolean(activeRequestModal)}
+          onClose={() => setActiveRequestModal(null)}
+        />
+      )}
 
     </div>
   );

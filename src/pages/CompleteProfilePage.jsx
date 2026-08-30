@@ -6,13 +6,12 @@ import { useToast } from '../context/ToastContext';
 import { 
   Building2, 
   Phone, 
-  MapPin, 
   HelpingHand, 
   Gift, 
   AlertCircle, 
-  UserCheck,
   Check,
-  Sparkles
+  ArrowLeft,
+  ArrowRight
 } from 'lucide-react';
 import { ALGERIA_WILAYAS } from '../data/algeriaWilayas';
 import { sanitizePhoneInput, isValidAlgerianPhone } from '../utils/phoneUtils';
@@ -24,10 +23,9 @@ export const CompleteProfilePage = () => {
   const { showSuccess, showError } = useToast();
 
   const [role, setRole] = useState(userProfile?.role || 'recipient');
-  const [orgName, setOrgName] = useState(userProfile?.orgName || userProfile?.displayName || '');
+  const [orgName, setOrgName] = useState(userProfile?.orgName || currentUser?.displayName || '');
   const [phone, setPhone] = useState(userProfile?.phone || '');
   const [city, setCity] = useState(userProfile?.city || 'الجزائر العاصمة');
-  const [notes, setNotes] = useState(userProfile?.notes || '');
   
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -48,12 +46,8 @@ export const CompleteProfilePage = () => {
     e.preventDefault();
     setError('');
 
-    if (!role) {
-      setError('يرجى اختيار نوع الحساب أولاً');
-      return;
-    }
     if (!orgName.trim()) {
-      setError('يرجى إدخال اسم الجمعية أو المتبرع');
+      setError('يرجى كتابة اسم الجمعية أو المتبرع');
       return;
     }
     if (!phone.trim() || !isValidAlgerianPhone(phone)) {
@@ -68,13 +62,13 @@ export const CompleteProfilePage = () => {
     setIsSubmitting(true);
     try {
       await saveUserProfile({
-        orgName,
+        orgName: orgName.trim(),
         role,
-        phone,
-        city,
-        notes
+        phone: phone.trim(),
+        city: city.trim(),
+        notes: ''
       });
-      showSuccess('تم حفظ بيانات الحساب بنجاح! مرحباً بك في المنصة.');
+      showSuccess('تم إعداد الحساب بنجاح! مرحباً بك في المنصة.');
       navigate(role === 'recipient' ? '/dashboard' : '/donor', { replace: true });
     } catch (err) {
       console.error("Save profile error:", err);
@@ -86,37 +80,36 @@ export const CompleteProfilePage = () => {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-10">
-      <div className="max-w-xl w-full bg-white rounded-3xl shadow-xl border border-slate-200 overflow-hidden space-y-6 p-6 sm:p-8">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 py-10">
+      <div className="max-w-lg w-full bg-white rounded-2xl border border-slate-200 shadow-sm p-6 sm:p-8 space-y-6">
         
         {/* Header */}
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-teal-50 text-teal-700 ring-4 ring-teal-50/50 mb-1">
-            <UserCheck className="w-7 h-7" />
-          </div>
-          <h1 className="text-2xl font-extrabold text-slate-900">{t('completeProfileTitle')}</h1>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-md mx-auto">
-            {t('completeProfileSubtitle')}
+        <div className="space-y-1 text-center">
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">
+            إكمال معلومات الحساب
+          </h1>
+          <p className="text-xs text-slate-500">
+            أدخل معلومات التواصل لتتمكن من إضافة أو تقديم المساعدات
           </p>
         </div>
 
-        {/* User Google Account Tag */}
+        {/* Verified Google Account Bar */}
         {currentUser && (
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-center gap-3">
+          <div className="bg-slate-50 border border-slate-200/80 rounded-xl p-3 flex items-center gap-3">
             {currentUser.photoURL ? (
               <img 
                 src={currentUser.photoURL} 
                 alt="Avatar" 
-                className="w-10 h-10 rounded-full border border-slate-300 shrink-0" 
+                className="w-9 h-9 rounded-full border border-slate-200 shrink-0" 
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-teal-600 text-white font-bold flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 rounded-full bg-emerald-700 text-white font-bold text-sm flex items-center justify-center shrink-0">
                 {(currentUser.email || 'U')[0].toUpperCase()}
               </div>
             )}
             <div className="overflow-hidden">
               <span className="text-[11px] text-slate-400 block font-medium">
-                {t('signedInAsGoogle')}
+                حساب Google المعتمد:
               </span>
               <span className="text-xs font-bold text-slate-800 truncate block dir-ltr text-right rtl:text-right">
                 {currentUser.email}
@@ -126,68 +119,64 @@ export const CompleteProfilePage = () => {
         )}
 
         {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 p-3.5 rounded-xl text-xs font-semibold flex items-center gap-2">
+          <div className="bg-red-50 border border-red-200 text-red-700 p-3 rounded-xl text-xs font-semibold flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-4">
           
-          {/* Role Selection */}
+          {/* Role Choice */}
           <div>
-            <label className="block text-xs font-bold uppercase text-slate-700 mb-2">
-              {t('accountTypeLabel')}
+            <label className="block text-xs font-bold text-slate-700 mb-2">
+              نوع النشاط في المنصة *
             </label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 onClick={() => setRole('recipient')}
-                className={`p-4 rounded-2xl border flex flex-col items-start gap-2 transition-all relative text-right rtl:text-right ${
+                className={`p-3.5 rounded-xl border flex flex-col items-start gap-1 transition-all text-right rtl:text-right ${
                   role === 'recipient'
-                    ? 'border-amber-500 bg-amber-50/80 text-amber-950 ring-2 ring-amber-400 font-bold shadow-sm'
+                    ? 'border-emerald-700 bg-emerald-50/70 text-emerald-950 ring-2 ring-emerald-600 font-bold'
                     : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
                 }`}
               >
-                {role === 'recipient' && (
-                  <div className="absolute top-3 left-3 rtl:right-auto rtl:left-3 bg-amber-500 text-white p-0.5 rounded-full">
-                    <Check className="w-3.5 h-3.5" />
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-1.5">
+                    <HelpingHand className="w-4 h-4 text-emerald-700" />
+                    <span className="text-xs font-bold">جمعية محتاجة</span>
                   </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <HelpingHand className="w-5 h-5 text-amber-600" />
-                  <span className="text-sm font-bold">{t('iNeedHelpCTA')}</span>
+                  {role === 'recipient' && <Check className="w-3.5 h-3.5 text-emerald-700" />}
                 </div>
-                <span className="text-xs text-slate-500 font-normal">{t('roleNeedHelpSub')}</span>
+                <span className="text-[10px] text-slate-500 font-normal">طلب مؤونة وإعانات</span>
               </button>
 
               <button
                 type="button"
                 onClick={() => setRole('donor')}
-                className={`p-4 rounded-2xl border flex flex-col items-start gap-2 transition-all relative text-right rtl:text-right ${
+                className={`p-3.5 rounded-xl border flex flex-col items-start gap-1 transition-all text-right rtl:text-right ${
                   role === 'donor'
-                    ? 'border-teal-500 bg-teal-50/80 text-teal-950 ring-2 ring-teal-400 font-bold shadow-sm'
+                    ? 'border-emerald-700 bg-emerald-50/70 text-emerald-950 ring-2 ring-emerald-600 font-bold'
                     : 'border-slate-200 text-slate-600 hover:border-slate-300 bg-white'
                 }`}
               >
-                {role === 'donor' && (
-                  <div className="absolute top-3 left-3 rtl:right-auto rtl:left-3 bg-teal-600 text-white p-0.5 rounded-full">
-                    <Check className="w-3.5 h-3.5" />
+                <div className="flex items-center justify-between w-full">
+                  <div className="flex items-center gap-1.5">
+                    <Gift className="w-4 h-4 text-emerald-700" />
+                    <span className="text-xs font-bold">جهة متبرعة</span>
                   </div>
-                )}
-                <div className="flex items-center gap-2">
-                  <Gift className="w-5 h-5 text-teal-600" />
-                  <span className="text-sm font-bold">{t('iWantToHelpCTA')}</span>
+                  {role === 'donor' && <Check className="w-3.5 h-3.5 text-emerald-700" />}
                 </div>
-                <span className="text-xs text-slate-500 font-normal">{t('roleWantHelpSub')}</span>
+                <span className="text-[10px] text-slate-500 font-normal">تقديم المساعدات والتكفل</span>
               </button>
             </div>
           </div>
 
-          {/* Org / Individual Name */}
+          {/* Org Name */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-1">
-              {t('orgNameLabel')}
+              اسم الجمعية أو المتبرع *
             </label>
             <div className="relative">
               <Building2 className="w-4 h-4 text-slate-400 absolute left-3 top-3 rtl:right-3 rtl:left-auto" />
@@ -196,17 +185,17 @@ export const CompleteProfilePage = () => {
                 required
                 value={orgName}
                 onChange={(e) => setOrgName(e.target.value)}
-                placeholder={t('orgNamePlaceholder')}
-                className="w-full pl-9 pr-3.5 rtl:pr-9 rtl:pl-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-teal-500 outline-none"
+                placeholder="مثال: جمعية الإحسان الخيرية أو فاعل خير"
+                className="w-full pl-9 pr-3.5 rtl:pr-9 rtl:pl-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-600 outline-none"
               />
             </div>
           </div>
 
-          {/* Phone & Wilaya in Algeria */}
+          {/* Phone & Wilaya */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {t('phoneLabel')}
+                رقم الهاتف للتواصل *
               </label>
               <div className="relative">
                 <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-3 rtl:right-3 rtl:left-auto" />
@@ -216,38 +205,36 @@ export const CompleteProfilePage = () => {
                   value={phone}
                   onChange={handlePhoneChange}
                   placeholder="0550 12 34 56"
-                  className="w-full pl-9 pr-3 rtl:pr-9 rtl:pl-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-teal-500 outline-none dir-ltr"
+                  className="w-full pl-9 pr-3 rtl:pr-9 rtl:pl-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-600 outline-none dir-ltr"
                 />
               </div>
             </div>
 
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                {t('cityLabel')}
+                الولاية *
               </label>
-              <div className="relative">
-                <select
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-teal-500 outline-none bg-white"
-                >
-                  {ALGERIA_WILAYAS.map((w) => (
-                    <option key={w.code} value={isRTL ? w.nameAr : w.nameEn}>
-                      {w.code} - {isRTL ? w.nameAr : w.nameEn}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <select
+                value={city}
+                onChange={(e) => setCity(e.target.value)}
+                className="w-full px-3 py-2.5 rounded-xl border border-slate-300 text-sm focus:ring-2 focus:ring-emerald-600 outline-none bg-white font-medium min-h-[42px]"
+              >
+                {ALGERIA_WILAYAS.map((w) => (
+                  <option key={w.code} value={isRTL ? w.nameAr : w.nameEn}>
+                    {w.code} - {isRTL ? w.nameAr : w.nameEn}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full bg-teal-600 hover:bg-teal-700 text-white font-bold text-sm py-3.5 rounded-2xl shadow-lg transition-all transform active:scale-95 flex items-center justify-center gap-2 min-h-[46px]"
+            className="w-full bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold text-sm py-3.5 rounded-xl shadow transition-all min-h-[46px] mt-2 flex items-center justify-center gap-2"
           >
-            <Sparkles className="w-4 h-4" />
-            <span>{isSubmitting ? t('savingProfile') : t('completeProfileBtn')}</span>
+            <span>{isSubmitting ? 'جاري الحفظ...' : 'حفظ وإكمال الدخول'}</span>
+            {isRTL ? <ArrowLeft className="w-4 h-4" /> : <ArrowRight className="w-4 h-4" />}
           </button>
         </form>
 
