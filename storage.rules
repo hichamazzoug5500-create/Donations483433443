@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isValidImage() {
+      return request.resource.size < 5 * 1024 * 1024 // 5MB max
+        && request.resource.contentType.matches('image/(jpeg|png|webp|gif)');
+    }
+
+    // Public read for images, authenticated write with size and type checks
+    match /{allPaths=**} {
+      allow read: if true;
+      allow write: if isAuthenticated() && isValidImage();
+    }
+  }
+}
