@@ -6,6 +6,7 @@
     "rules": "storage.rules"
   },
   "hosting": {
+    "site": "donations-algeria",
     "public": "dist",
     "ignore": [
       "firebase.json",
