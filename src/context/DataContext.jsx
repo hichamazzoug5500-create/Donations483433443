@@ -161,45 +161,37 @@ export const DataProvider = ({ children }) => {
     const branchId = userProfile?.branchId || 'branch-cra-blida';
     const branchName = userProfile?.branchName || 'فرع الطوارئ';
 
-    // Auto-tag each item with a stable unique itemId if missing
-    const sanitizedItems = (needData.items || []).map((item, idx) => ({
-      itemId: item.itemId || `item_${Date.now()}_${idx}_${Math.random().toString(36).substr(2, 4)}`,
-      category: item.category || 'food',
-      description: item.description || '',
-      quantity: Number(item.quantity) || 1,
-      unit: item.unit || 'unit',
-      quantityFulfilled: Number(item.quantityFulfilled) || 0,
-      priority: item.priority || needData.priority || 'P2_urgent'
-    }));
-
     const payload = {
       orgId,
       orgName,
       branchId,
       branchName,
-      isCrossOrg: Boolean(needData.isCrossOrg),
-      disasterType: needData.disasterType || 'flood',
-      title: needData.title || `نداء إغاثة عاجل - ${needData.location?.wilaya || 'المنطقة'}`,
-      notes: needData.notes || '',
-      priority: needData.priority || 'P2_urgent',
-      status: 'active',
-      items: sanitizedItems,
+      title: needData.needDescription ? needData.needDescription.slice(0, 80) : needData.title,
+      needDescription: needData.needDescription || needData.title || '',
+      category: needData.category || 'food',
+      urgency: needData.urgency || 'high',
+      priority: needData.urgency === 'high' ? 'P1_critical' : needData.urgency === 'medium' ? 'P2_urgent' : 'P3_high',
+      quantity: needData.quantity || '',
+      phone: needData.phone || userProfile?.phone || '',
+      contactPhone: needData.phone || userProfile?.phone || '',
+      contactName: userProfile?.displayName || branchName,
+      status: 'open',
       location: {
-        wilaya: needData.location?.wilaya || userProfile?.city || 'البليدة',
-        address: needData.location?.address || '',
-        lat: Number(needData.location?.lat) || 36.4700,
-        lng: Number(needData.location?.lng) || 2.8300,
-        accessStatus: needData.location?.accessStatus || 'open'
+        city: needData.location?.city || needData.city || 'البليدة',
+        wilaya: needData.location?.wilaya || needData.city || 'البليدة',
+        address: needData.location?.address || needData.address || '',
+        lat: Number(needData.location?.lat ?? needData.lat) || 36.4700,
+        lng: Number(needData.location?.lng ?? needData.lng) || 2.8300
       },
-      branchLocation: needData.branchLocation || { lat: 36.4700, lng: 2.8300 },
-      branchPhone: userProfile?.phone || needData.contactPhone || '+213 550 11 22 33',
-      affectedPopulation: {
-        households: Number(needData.affectedPopulation?.households) || 0,
-        individuals: Number(needData.affectedPopulation?.individuals) || 0
-      },
-      contactName: needData.contactName || userProfile?.displayName || 'مسؤول الطوارئ',
-      contactPhone: needData.contactPhone || userProfile?.phone || '',
-      photos: needData.photos || [],
+      items: needData.items || [
+        {
+          itemId: 'item_' + Date.now(),
+          category: needData.category || 'food',
+          description: needData.needDescription || '',
+          quantity: needData.quantity || '1',
+          unit: ''
+        }
+      ],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -210,13 +202,11 @@ export const DataProvider = ({ children }) => {
       setNeeds(updated);
       persistDemo('relief_demo_needs', updated);
 
-      // Trigger mock notification for branches in the same org
-      branches.filter(b => b.orgId === orgId && b.id !== branchId).forEach(b => {
-        sendNotification('broadcast', {
-          title: `🆘 نداء إغاثة جديد (${payload.priority}): ${payload.title}`,
-          body: `فرع ${branchName} أعلن عن احتياج عاجل في ${payload.location.wilaya}.`,
-          relatedNeedId: newNeed.id
-        });
+      // Trigger notification for other branches
+      sendNotification('broadcast', {
+        title: `🆘 نداء مساعدة جديد: ${payload.title}`,
+        body: `فرع ${branchName} أعلن عن احتياج مساعدة في ${payload.location.wilaya}.`,
+        relatedNeedId: newNeed.id
       });
 
       return newNeed.id;
@@ -259,6 +249,52 @@ export const DataProvider = ({ children }) => {
     await deleteDoc(doc(db, 'needs', needId));
   };
 
+  // Direct commitment / pledging by another branch
+  const commitToNeed = async (needId, pledgeData) => {
+    const targetNeed = needs.find(n => n.id === needId);
+    const donorBranchName = pledgeData.donorName || userProfile?.branchName || userProfile?.orgName;
+    const donorBranchId = userProfile?.branchId || 'branch-cra-algiers';
+
+    const updates = {
+      status: 'in_progress',
+      committedDonorId: donorBranchId,
+      committedDonorName: donorBranchName,
+      committedDonorPhone: pledgeData.donorPhone || userProfile?.phone || '',
+      commitmentType: pledgeData.commitmentType || 'full',
+      pledgedQuantity: pledgeData.pledgedQuantity || '',
+      remainingQuantity: pledgeData.commitmentType === 'partial' ? pledgeData.remainingQuantity : null,
+      deliveryDate: pledgeData.deliveryDate || '',
+      donorNotes: pledgeData.donorNotes || '',
+      updatedAt: new Date().toISOString()
+    };
+
+    await updateNeed(needId, updates);
+
+    // Create a dispatch record to keep tracking in sync
+    if (targetNeed) {
+      await createDispatch({
+        toOrgId: targetNeed.orgId,
+        toOrgName: targetNeed.orgName,
+        toBranchId: targetNeed.branchId,
+        toBranchName: targetNeed.branchName,
+        needId: needId,
+        items: [
+          {
+            needItemId: targetNeed.items && targetNeed.items[0]?.itemId ? targetNeed.items[0].itemId : 'item_1',
+            category: targetNeed.category || 'food',
+            description: targetNeed.needDescription || targetNeed.title,
+            quantity: pledgeData.pledgedQuantity || targetNeed.quantity || '1',
+            unit: ''
+          }
+        ],
+        notes: pledgeData.donorNotes || '',
+        transportDetails: {
+          estimatedArrival: pledgeData.deliveryDate || ''
+        }
+      });
+    }
+  };
+
   // ==========================================
   // 2. DISPATCHES MANAGEMENT (Inter-Branch Aid)
   // ==========================================
@@ -276,7 +312,7 @@ export const DataProvider = ({ children }) => {
       toBranchId: dispatchData.toBranchId,
       toBranchName: dispatchData.toBranchName || 'الفرع المستقبل',
       needId: dispatchData.needId,
-      status: 'pledged', // pledged -> packing -> dispatched -> in_transit -> delivered -> confirmed
+      status: 'pledged',
       items: dispatchData.items || [],
       transportDetails: {
         vehiclePlate: dispatchData.transportDetails?.vehiclePlate || '',
@@ -290,28 +326,6 @@ export const DataProvider = ({ children }) => {
       updatedAt: new Date().toISOString()
     };
 
-    // Calculate & update need's item fulfillment immediately
-    const targetNeed = needs.find(n => n.id === dispatchData.needId);
-    if (targetNeed) {
-      const updatedNeedItems = targetNeed.items.map(nItem => {
-        const matchingDispatchItem = payload.items.find(dItem => dItem.needItemId === nItem.itemId);
-        if (matchingDispatchItem) {
-          const newQty = (nItem.quantityFulfilled || 0) + (Number(matchingDispatchItem.quantity) || 0);
-          return { ...nItem, quantityFulfilled: newQty };
-        }
-        return nItem;
-      });
-
-      const allFulfilled = updatedNeedItems.every(item => (item.quantityFulfilled || 0) >= item.quantity);
-      const someFulfilled = updatedNeedItems.some(item => (item.quantityFulfilled || 0) > 0);
-      const newStatus = allFulfilled ? 'fulfilled' : (someFulfilled ? 'partially_fulfilled' : 'active');
-
-      updateNeed(targetNeed.id, {
-        items: updatedNeedItems,
-        status: newStatus
-      });
-    }
-
     if (!isFirebaseConfigured || isDemoMode) {
       const newDispatch = { id: 'disp-' + Date.now(), ...payload };
       const updated = [newDispatch, ...dispatches];
@@ -321,8 +335,8 @@ export const DataProvider = ({ children }) => {
       // Create notification for receiving branch
       sendNotification(dispatchData.toBranchId, {
         type: 'dispatch_pledged',
-        title: `📦 التزام بإرسال شحنة إغاثة من ${fromBranchName}`,
-        body: `تم تجهيز شحنة إغاثة تتضمن ${payload.items.length} أصناف في طريقها لفرعكم.`,
+        title: `📦 التزام بإرسال معونة من ${fromBranchName}`,
+        body: `تم تسجيل التزام بإرسال مساعدات إلى فرعكم.`,
         relatedNeedId: dispatchData.needId,
         relatedDispatchId: newDispatch.id
       });
@@ -354,17 +368,6 @@ export const DataProvider = ({ children }) => {
     if (!isFirebaseConfigured || isDemoMode) {
       const updated = dispatches.map(d => d.id === dispatchId ? { ...d, ...updates } : d);
       persistDemo('relief_demo_dispatches', updated);
-
-      const targetDisp = dispatches.find(d => d.id === dispatchId);
-      if (targetDisp) {
-        sendNotification(targetDisp.toBranchId, {
-          type: 'dispatch_status_update',
-          title: `🚚 تحديث مسار الشحنة (${newStatus})`,
-          body: `الشحنة القادمة من ${targetDisp.fromBranchName} أصبحت بحالة: ${newStatus}.`,
-          relatedDispatchId: dispatchId,
-          relatedNeedId: targetDisp.needId
-        });
-      }
       return;
     }
 
@@ -436,7 +439,6 @@ export const DataProvider = ({ children }) => {
       return;
     }
 
-    // In firestore, mark items
     notifications.forEach(async (n) => {
       if (!n.isRead && currentUser?.uid) {
         try {
@@ -545,7 +547,6 @@ export const DataProvider = ({ children }) => {
   };
 
   const value = {
-    // Entities
     organizations,
     branches,
     needs,
@@ -558,6 +559,7 @@ export const DataProvider = ({ children }) => {
     createNeed,
     updateNeed,
     deleteNeed,
+    commitToNeed,
 
     // Dispatch actions
     createDispatch,
@@ -583,3 +585,5 @@ export const DataProvider = ({ children }) => {
     </DataContext.Provider>
   );
 };
+
+export default DataContext;
