@@ -12,7 +12,9 @@ import {
   CheckCircle,
   AlertTriangle,
   RotateCcw,
-  Sparkles
+  Sparkles,
+  Phone,
+  Filter
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -34,7 +36,8 @@ export default function AdminPanel() {
   } = useData();
   const { isRtl } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState('orgs'); // 'orgs' | 'branches' | 'needs' | 'maintenance'
+  const [activeTab, setActiveTab] = useState('branches'); // 'orgs' | 'branches' | 'needs' | 'maintenance'
+  const [selectedOrgFilter, setSelectedOrgFilter] = useState('all');
   const [showOrgModal, setShowOrgModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
 
@@ -86,11 +89,20 @@ export default function AdminPanel() {
     }
   };
 
-  // 2. Create Branch + Create its Login Credentials (with optional Email)
+  // 2. Open Branch Modal for a Specific Charity
+  const openBranchModalForOrg = (orgId) => {
+    setBranchForm(prev => ({
+      ...prev,
+      orgId: orgId || (organizations[0]?.id || '')
+    }));
+    setShowBranchModal(true);
+  };
+
+  // 3. Create Branch + Create its Login Credentials
   const handleCreateBranch = async (e) => {
     e.preventDefault();
     if (!branchForm.name.trim() || !branchForm.orgId || !branchForm.username.trim() || !branchForm.password) {
-      alert(isRtl ? 'يرجى ملء جميع الحقول بما في ذلك اسم المستخدم وكلمة المرور' : 'Please fill all required fields');
+      alert(isRtl ? 'يرجى ملء جميع الحقول المطلوبة بما في ذلك اسم المستخدم وكلمة المرور' : 'Please fill all required fields');
       return;
     }
 
@@ -152,7 +164,7 @@ export default function AdminPanel() {
     }
   };
 
-  // 3. Purge all dummy data
+  // 4. Purge all dummy data
   const handlePurgeAll = async () => {
     if (confirm(isRtl ? 'هل أنت متأكد من حذف وتصفير جميع البيانات السابقة؟' : 'Are you sure you want to clear all data?')) {
       setSaving(true);
@@ -167,6 +179,11 @@ export default function AdminPanel() {
     }
   };
 
+  // Displayed Organizations for Tab 2
+  const displayedOrgsForBranches = selectedOrgFilter === 'all'
+    ? organizations
+    : organizations.filter(o => o.id === selectedOrgFilter);
+
   return (
     <div className="max-w-4xl mx-auto px-3 sm:px-6 py-6 space-y-5 animate-in fade-in">
       
@@ -174,7 +191,7 @@ export default function AdminPanel() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 rounded-xl bg-purple-800 text-white">
+            <div className="p-1.5 rounded-xl bg-purple-800 text-white shadow-xs">
               <ShieldCheck className="w-5 h-5" />
             </div>
             <h1 className="text-xl font-black text-slate-900">
@@ -186,23 +203,13 @@ export default function AdminPanel() {
           </div>
           <p className="text-xs text-slate-500">
             {isRtl 
-              ? 'إنشاء الجمعيات، وتعيين الفروع وحسابات الدخول الخاصة بكل فرع.' 
-              : 'Create charities, attach branches, and issue login credentials.'}
+              ? 'إدارة الجمعيات، وتصنيف فروع كل جمعية وتعيين حسابات الدخول المؤسساتية.' 
+              : 'Organize charities, group their regional branches, and issue credentials.'}
           </p>
         </div>
 
         {/* Tab Controls */}
         <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto">
-          <button
-            onClick={() => setActiveTab('orgs')}
-            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
-              activeTab === 'orgs' ? 'bg-white text-purple-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            <Building2 className="w-3.5 h-3.5" />
-            <span>{isRtl ? '1. الجمعيات' : '1. Charities'} ({organizations.length})</span>
-          </button>
-
           <button
             onClick={() => setActiveTab('branches')}
             className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
@@ -210,7 +217,17 @@ export default function AdminPanel() {
             }`}
           >
             <MapPin className="w-3.5 h-3.5" />
-            <span>{isRtl ? '2. الفروع والحسابات' : '2. Branches & Logins'} ({branches.length})</span>
+            <span>{isRtl ? 'الفروع والحسابات' : 'Branches & Logins'} ({branches.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('orgs')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              activeTab === 'orgs' ? 'bg-white text-purple-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>{isRtl ? 'الجمعيات' : 'Charities'} ({organizations.length})</span>
           </button>
 
           <button
@@ -246,10 +263,12 @@ export default function AdminPanel() {
             <button onClick={() => setCreatedBranchInfo(null)} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
           </div>
           <p className="text-xs text-emerald-950">
-            {isRtl ? 'يمكن لمنسق الفرع تسجيل الدخول عبر البيانات التالية:' : 'The branch coordinator can sign in using:'}
+            {isRtl 
+              ? `الفرع تابع لجمعية: "${createdBranchInfo.orgName}". يمكن لمنسق الفرع تسجيل الدخول عبر البيانات التالية:` 
+              : `Branch of "${createdBranchInfo.orgName}". Login credentials:`}
           </p>
           <div className="p-2.5 bg-white rounded-xl border border-emerald-200 text-xs font-mono flex flex-wrap gap-4 text-slate-800">
-            <span>👤 <strong>{isRtl ? 'اسم المستخدم للدخول:' : 'Username:'}</strong> {createdBranchInfo.username}</span>
+            <span>👤 <strong>{isRtl ? 'اسم الدخول:' : 'Username:'}</strong> {createdBranchInfo.username}</span>
             {createdBranchInfo.email && (
               <span>✉️ <strong>{isRtl ? 'البريد:' : 'Email:'}</strong> {createdBranchInfo.email}</span>
             )}
@@ -259,17 +278,233 @@ export default function AdminPanel() {
       )}
 
       {/* ==================================================== */}
-      {/* 1. ORGANIZATIONS TAB */}
+      {/* 1. BRANCHES & LOGINS TAB (SORTED & GROUPED BY CHARITY) */}
+      {/* ==================================================== */}
+      {activeTab === 'branches' && (
+        <div className="space-y-4">
+          
+          {/* Top Bar: Charity Filter Pills + Add Branch Button */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-3 rounded-2xl border border-slate-200 shadow-2xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+              <span className="text-xs font-bold text-slate-500 flex items-center gap-1 shrink-0 ml-1 rtl:mr-1 rtl:ml-0">
+                <Filter className="w-3.5 h-3.5" />
+                <span>{isRtl ? 'تصنيف حسب:' : 'Filter:'}</span>
+              </span>
+
+              <button
+                onClick={() => setSelectedOrgFilter('all')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 border ${
+                  selectedOrgFilter === 'all'
+                    ? 'bg-purple-900 text-white border-purple-900 shadow-xs'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                }`}
+              >
+                {isRtl ? 'كل الجمعيات' : 'All Charities'} ({branches.length})
+              </button>
+
+              {organizations.map(org => {
+                const count = branches.filter(b => b.orgId === org.id).length;
+                return (
+                  <button
+                    key={org.id}
+                    onClick={() => setSelectedOrgFilter(org.id)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition shrink-0 flex items-center gap-1.5 border ${
+                      selectedOrgFilter === org.id
+                        ? 'bg-purple-900 text-white border-purple-900 shadow-xs'
+                        : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                    }`}
+                  >
+                    <span>{org.name}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 rounded-full bg-black/10 font-mono">
+                      {count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => {
+                if (organizations.length === 0) {
+                  alert(isRtl ? 'يرجى إضافة جمعية أولاً في تبويب "الجمعيات"' : 'Please add a charity first');
+                  setActiveTab('orgs');
+                  return;
+                }
+                openBranchModalForOrg(selectedOrgFilter !== 'all' ? selectedOrgFilter : organizations[0].id);
+              }}
+              className="flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white text-xs font-bold shadow-xs transition shrink-0"
+            >
+              <Plus className="w-4 h-4" />
+              <span>{isRtl ? 'إضافة فرع جديد' : 'Add Branch'}</span>
+            </button>
+          </div>
+
+          {/* Grouped Charity Sections */}
+          {organizations.length === 0 ? (
+            <div className="p-8 text-center bg-white rounded-3xl border border-slate-200 space-y-3">
+              <Building2 className="w-12 h-12 text-slate-300 mx-auto" />
+              <h3 className="text-sm font-bold text-slate-800">
+                {isRtl ? 'لم يتم تسجيل أي جمعية حتى الآن' : 'No charities registered yet'}
+              </h3>
+              <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                {isRtl ? 'يجب إنشاء جمعية معتمدة أولاً (مثل الهلال الأحمر) للبدء في إضافة الفروع التابعة لها.' : 'Create an organization first, then attach regional branches.'}
+              </p>
+              <button
+                onClick={() => {
+                  setActiveTab('orgs');
+                  setShowOrgModal(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-emerald-800 text-white text-xs font-bold shadow-xs hover:bg-emerald-900 transition inline-flex items-center gap-1.5"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{isRtl ? 'إضافة أول جمعية الآن' : 'Add First Charity'}</span>
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {displayedOrgsForBranches.map(org => {
+                const orgBranches = branches
+                  .filter(b => b.orgId === org.id)
+                  .sort((a, b) => a.wilaya.localeCompare(b.wilaya, 'ar'));
+
+                return (
+                  <div key={org.id} className="bg-white rounded-3xl border border-slate-200 shadow-xs overflow-hidden">
+                    
+                    {/* Organization Banner Header */}
+                    <div className="p-4 bg-gradient-to-r from-slate-50 to-purple-50/40 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-9 h-9 rounded-xl bg-purple-900 text-white flex items-center justify-center font-bold shrink-0 shadow-2xs">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="font-black text-sm text-slate-900">{org.name}</h3>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-purple-100 text-purple-900 border border-purple-200">
+                              {orgBranches.length} {isRtl ? 'فروع مسجلة' : 'branches'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] text-slate-500">
+                            {isRtl ? 'الفروع التابعة والمصرح لها بالتنسيق الميداني تحت هذه الهيئة' : 'Authorized regional branches for this charity'}
+                          </p>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => openBranchModalForOrg(org.id)}
+                        className="self-start sm:self-auto px-3 py-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-300 text-purple-950 text-xs font-bold transition flex items-center gap-1.5 shadow-2xs"
+                      >
+                        <Plus className="w-3.5 h-3.5 text-purple-800" />
+                        <span>{isRtl ? 'إضافة فرع لهذه الجمعية' : 'Add Branch to Charity'}</span>
+                      </button>
+                    </div>
+
+                    {/* Organization Branches Grid */}
+                    <div className="p-4">
+                      {orgBranches.length === 0 ? (
+                        <div className="p-5 text-center bg-slate-50/60 rounded-2xl border border-dashed border-slate-300 space-y-2">
+                          <p className="text-xs text-slate-500">
+                            {isRtl ? `لا توجد فروع مسجلة لـ "${org.name}" حتى الآن.` : `No branches added for "${org.name}" yet.`}
+                          </p>
+                          <button
+                            onClick={() => openBranchModalForOrg(org.id)}
+                            className="text-xs font-bold text-purple-900 hover:underline inline-flex items-center gap-1"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>{isRtl ? 'تعيين أول فرع الآن' : 'Add First Branch'}</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          {orgBranches.map(branch => (
+                            <div 
+                              key={branch.id} 
+                              className="p-3.5 rounded-2xl bg-white border border-slate-200 hover:border-purple-300 shadow-2xs space-y-2.5 transition group"
+                            >
+                              {/* Top: Wilaya Tag + Branch Name + Delete */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="space-y-0.5">
+                                  <div className="flex items-center gap-1.5">
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-purple-50 text-purple-900 border border-purple-200">
+                                      📍 {branch.wilaya}
+                                    </span>
+                                  </div>
+                                  <h4 className="font-bold text-xs sm:text-sm text-slate-900">{branch.name}</h4>
+                                </div>
+
+                                <button
+                                  onClick={() => {
+                                    if (confirm(isRtl ? `حذف فرع "${branch.name}" التابع لـ "${org.name}"؟` : `Delete branch "${branch.name}"?`)) {
+                                      deleteBranch(branch.id);
+                                    }
+                                  }}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition"
+                                  title={isRtl ? 'حذف الفرع' : 'Delete Branch'}
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+
+                              {/* Details: Address, Phone, Email */}
+                              <div className="text-[11px] text-slate-600 space-y-1 pt-1 border-t border-slate-100">
+                                {branch.address && (
+                                  <p className="flex items-center gap-1.5 text-slate-500">
+                                    <span className="shrink-0 text-slate-400">🏢</span>
+                                    <span className="truncate">{branch.address}</span>
+                                  </p>
+                                )}
+                                {branch.phone && (
+                                  <p className="flex items-center gap-1.5 text-slate-700">
+                                    <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                    <span className="dir-ltr font-medium">{branch.phone}</span>
+                                  </p>
+                                )}
+                                {branch.email && (
+                                  <p className="flex items-center gap-1.5 text-emerald-800 font-mono">
+                                    <Mail className="w-3 h-3 text-emerald-600 shrink-0" />
+                                    <span className="truncate">{branch.email}</span>
+                                  </p>
+                                )}
+                              </div>
+
+                              {/* Login Credentials Box */}
+                              {branch.loginUsername && (
+                                <div className="p-2 bg-slate-50 rounded-xl border border-slate-200 flex items-center justify-between text-[11px] font-mono text-slate-700">
+                                  <span className="flex items-center gap-1 text-slate-500">
+                                    <User className="w-3 h-3 text-purple-700" />
+                                    <span>{isRtl ? 'حساب الدخول:' : 'Login:'}</span>
+                                  </span>
+                                  <strong className="text-slate-900 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                    {branch.loginUsername}
+                                  </strong>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {/* ==================================================== */}
+      {/* 2. ORGANIZATIONS TAB */}
       {/* ==================================================== */}
       {activeTab === 'orgs' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-sm font-bold text-slate-900">
-                {isRtl ? 'قائمة الجمعيات الإنسانية المسجلة' : 'Registered Charities'}
+                {isRtl ? 'قائمة الجمعيات الإنسانية المعتمدة' : 'Accredited Charities'}
               </h2>
               <p className="text-xs text-slate-500">
-                {isRtl ? 'أضف الجمعيات أولاً، ثم انتقل لتبويب الفروع لإنشاء الفروع التابعة لها.' : 'Add charities first, then add their branches in Tab 2.'}
+                {isRtl ? 'إضافة وتوثيق الهيئات والجمعيات المركزية.' : 'Register and manage central charities.'}
               </p>
             </div>
             <button
@@ -323,90 +558,6 @@ export default function AdminPanel() {
                   </div>
                 );
               })}
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* ==================================================== */}
-      {/* 2. BRANCHES & LOGINS TAB */}
-      {/* ==================================================== */}
-      {activeTab === 'branches' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div>
-              <h2 className="text-sm font-bold text-slate-900">
-                {isRtl ? 'فروع الجمعيات وحسابات الدخول' : 'Branch Locations & Logins'}
-              </h2>
-              <p className="text-xs text-slate-500">
-                {isRtl ? 'إدارة الفروع الإقليمية وتعيين بيانات الاعتماد وحسابات الدخول المؤسساتية.' : 'Manage branch locations and issue official login credentials.'}
-              </p>
-            </div>
-
-            <button
-              onClick={() => {
-                if (organizations.length === 0) {
-                  alert(isRtl ? 'يرجى إضافة جمعية أولاً في التبويب 1' : 'Please add a charity first in Tab 1');
-                  setActiveTab('orgs');
-                  return;
-                }
-                setBranchForm(prev => ({ ...prev, orgId: organizations[0].id }));
-                setShowBranchModal(true);
-              }}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
-            >
-              <Plus className="w-4 h-4" />
-              <span>{isRtl ? 'إضافة فرع وتعيين حساب الدخول' : 'Add Branch & Login'}</span>
-            </button>
-          </div>
-
-          {branches.length === 0 ? (
-            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 space-y-2">
-              <MapPin className="w-10 h-10 text-slate-300 mx-auto" />
-              <h3 className="text-sm font-bold text-slate-800">
-                {isRtl ? 'لا توجد فروع مضافة حالياً' : 'No branches added yet'}
-              </h3>
-              <p className="text-xs text-slate-500">
-                {isRtl ? 'أنشئ فرعاً وحدد اسم المستخدم وكلمة المرور للدخول.' : 'Create a branch and set its login credentials.'}
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {branches.map(branch => (
-                <div key={branch.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-200 inline-block mb-1">
-                        {branch.orgName}
-                      </span>
-                      <h3 className="font-bold text-sm text-slate-900">{branch.name}</h3>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        if (confirm(isRtl ? `حذف فرع "${branch.name}"؟` : `Delete ${branch.name}?`)) {
-                          deleteBranch(branch.id);
-                        }
-                      }}
-                      className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <div className="text-xs text-slate-500 space-y-0.5">
-                    <p>📍 {branch.wilaya} {branch.address ? `— ${branch.address}` : ''}</p>
-                    {branch.phone && <p>📞 {branch.phone}</p>}
-                    {branch.email && <p className="text-emerald-800 font-mono">✉️ {branch.email}</p>}
-                  </div>
-
-                  {branch.loginUsername && (
-                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-mono">
-                      <span>👤 {isRtl ? 'اسم الدخول:' : 'Login:'} <strong className="text-slate-900">{branch.loginUsername}</strong></span>
-                    </div>
-                  )}
-                </div>
-              ))}
             </div>
           )}
         </div>
@@ -547,7 +698,7 @@ export default function AdminPanel() {
                   <select
                     value={branchForm.wilaya}
                     onChange={e => setBranchForm({ ...branchForm, wilaya: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white"
                   >
                     {ALGERIA_WILAYAS.map(w => (
                       <option key={w.code} value={w.nameAr}>{w.nameAr}</option>
@@ -562,7 +713,7 @@ export default function AdminPanel() {
                     placeholder="0550 12 34 56"
                     value={branchForm.phone}
                     onChange={e => setBranchForm({ ...branchForm, phone: e.target.value })}
-                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs dir-ltr"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs dir-ltr"
                   />
                 </div>
               </div>
