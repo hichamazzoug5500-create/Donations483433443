@@ -7,7 +7,8 @@ import {
   ShieldCheck, 
   Building2, 
   PlusCircle,
-  ArrowLeftRight
+  ArrowLeftRight,
+  User
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
@@ -17,12 +18,12 @@ import { DEMO_USERS } from '../data/mockReliefData';
 
 export default function Navbar() {
   const { currentUser, userProfile, logout, isSuperAdmin, loginDemoAccount } = useAuth();
-  const { lang, toggleLanguage, isRtl, t } = useLanguage();
+  const { lang, toggleLanguage, isRtl } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
 
   const [showPostModal, setShowPostModal] = useState(false);
-  const [showDemoSwitchMenu, setShowDemoSwitchMenu] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
 
   const isCurrent = (path) => location.pathname === path;
 
@@ -37,147 +38,126 @@ export default function Navbar() {
 
   return (
     <>
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-xs">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-40 shadow-2xs">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6">
+          <div className="flex justify-between items-center h-14">
             
-            {/* Brand Logo & Name */}
-            <div className="flex items-center gap-4 sm:gap-6">
-              <Link to="/dashboard" className="flex items-center gap-2.5 shrink-0">
-                <div className="w-10 h-10 rounded-2xl bg-emerald-800 flex items-center justify-center text-white font-extrabold text-sm shadow-xs">
+            {/* Brand Logo & Direct Links */}
+            <div className="flex items-center gap-3 sm:gap-6">
+              <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
+                <div className="w-8 h-8 rounded-xl bg-emerald-800 flex items-center justify-center text-white font-extrabold text-xs shadow-2xs">
                   {lang === 'ar' ? 'أمل' : 'HL'}
                 </div>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                      {isRtl ? 'منصة تنسيق الإغاثة' : 'Relief Coordination'}
-                    </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-full hidden sm:inline">
-                      {isRtl ? 'بين الجمعيات' : 'Inter-Branch'}
-                    </span>
-                  </div>
-                  <span className="text-[10px] text-slate-500 font-medium hidden sm:block">
-                    {isRtl ? 'الهلال الأحمر والجمعيات الإنسانية بالجزائر' : 'Humanitarian Relief Network'}
+                <div className="flex items-center gap-1.5">
+                  <span className="text-sm sm:text-base font-black text-slate-900 tracking-tight">
+                    {isRtl ? 'منظومة الإغاثة' : 'Relief Network'}
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 bg-emerald-100 text-emerald-900 rounded-md hidden xs:inline">
+                    🇩🇿
                   </span>
                 </div>
               </Link>
 
-              {/* Desktop Direct Nav Links */}
+              {/* Desktop Nav Links */}
               {currentUser && (
-                <nav className="hidden md:flex items-center gap-2 pr-3 rtl:pr-4 rtl:border-r ltr:pl-4 ltr:border-l border-slate-200">
+                <nav className="hidden md:flex items-center gap-1 rtl:pr-3 rtl:border-r ltr:pl-3 ltr:border-l border-slate-200">
                   <Link
                     to="/dashboard"
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                       isCurrent('/dashboard')
-                        ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                        ? 'bg-emerald-50 text-emerald-900'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    <Building2 className="w-4 h-4 text-emerald-800" />
-                    <span>{isRtl ? 'لوحة قيادة الفرع' : 'Branch Dashboard'}</span>
+                    {isRtl ? 'الرئيسية' : 'Feed'}
                   </Link>
 
                   <Link
                     to="/map"
-                    className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                       isCurrent('/map')
-                        ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                        ? 'bg-emerald-50 text-emerald-900'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                     }`}
                   >
-                    <MapIcon className="w-4 h-4 text-emerald-800" />
-                    <span>{isRtl ? 'الخريطة الميدانية' : 'National Map'}</span>
+                    {isRtl ? 'الخريطة' : 'Map'}
                   </Link>
 
                   {isSuperAdmin && (
                     <Link
                       to="/admin"
-                      className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold transition ${
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition ${
                         isCurrent('/admin')
-                          ? 'bg-purple-50 text-purple-900 border border-purple-200'
+                          ? 'bg-purple-50 text-purple-900'
                           : 'text-purple-700 hover:bg-purple-50'
                       }`}
                     >
-                      <ShieldCheck className="w-4 h-4 text-purple-700" />
-                      <span>{isRtl ? 'الإدارة العامة' : 'Admin Hub'}</span>
+                      {isRtl ? 'الإدارة' : 'Admin'}
                     </Link>
                   )}
                 </nav>
               )}
             </div>
 
-            {/* Right Side Header Controls */}
-            <div className="flex items-center gap-2 sm:gap-3">
+            {/* Right Controls */}
+            <div className="flex items-center gap-1.5 sm:gap-2">
               
-              {/* Broadcast Need Button */}
+              {/* Notification Bell */}
               {currentUser && (
-                <button
-                  onClick={() => setShowPostModal(true)}
-                  className="hidden sm:flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold text-xs px-4 py-2 rounded-xl shadow-xs transition"
-                >
-                  <PlusCircle className="w-4 h-4 text-emerald-300" />
-                  <span>{isRtl ? 'نشر طلب مساعدة' : 'Post Need'}</span>
-                </button>
+                <NotificationBell onSelectNeed={(id) => navigate(`/dashboard`)} />
               )}
 
-              {/* In-App Notifications Bell */}
-              {currentUser && (
-                <NotificationBell onSelectNeed={(id) => navigate(`/needs/${id}`)} />
-              )}
-
-              {/* Language Switcher */}
+              {/* Language Switch */}
               <button
                 onClick={toggleLanguage}
-                className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition"
-                title={lang === 'ar' ? 'Switch to English' : 'التحويل إلى العربية'}
+                className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold border border-slate-200 transition"
               >
-                <Globe className="w-3.5 h-3.5 text-slate-500" />
-                <span>{lang === 'ar' ? 'English' : 'العربية'}</span>
+                {lang === 'ar' ? 'EN' : 'عربي'}
               </button>
 
-              {/* User Account / Role Switcher */}
+              {/* User Avatar & Menu */}
               {currentUser ? (
                 <div className="relative">
                   <button
-                    onClick={() => setShowDemoSwitchMenu(!showDemoSwitchMenu)}
-                    className="flex items-center gap-2 p-1.5 pl-2.5 rounded-xl hover:bg-slate-50 transition border border-slate-200"
+                    onClick={() => setShowUserDropdown(!showUserDropdown)}
+                    className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-slate-50 transition border border-slate-200"
                   >
-                    <div className="w-8 h-8 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                    <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
                       {userProfile?.displayName ? userProfile.displayName[0].toUpperCase() : 'U'}
                     </div>
-                    <div className="text-right rtl:text-right ltr:text-left hidden lg:block max-w-[130px]">
-                      <span className="text-xs font-bold text-slate-900 block truncate">
-                        {userProfile?.displayName}
-                      </span>
-                      <span className="text-[10px] text-emerald-800 font-bold block truncate">
-                        {userProfile?.branchName || userProfile?.orgName}
-                      </span>
-                    </div>
-                    <ArrowLeftRight className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="text-xs font-bold text-slate-800 hidden sm:inline max-w-[100px] truncate px-1">
+                      {userProfile?.displayName || userProfile?.branchName}
+                    </span>
                   </button>
 
-                  {/* Quick Demo Role Switcher Popup */}
-                  {showDemoSwitchMenu && (
-                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200 p-3 z-50 animate-in fade-in zoom-in-95">
-                      <p className="text-[11px] font-bold text-slate-500 mb-2 uppercase tracking-wider">
-                        {isRtl ? 'تبديل الحساب التجريبي / الفرع' : 'Switch Demo Branch'}
+                  {/* Dropdown Menu */}
+                  {showUserDropdown && (
+                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-50 animate-in fade-in">
+                      <div className="px-2 py-1.5 mb-2 border-b border-slate-100">
+                        <p className="text-xs font-bold text-slate-900">{userProfile?.displayName}</p>
+                        <p className="text-[10px] text-emerald-800 font-bold">{userProfile?.branchName}</p>
+                      </div>
+
+                      <p className="text-[10px] font-bold text-slate-400 px-2 mb-1 uppercase tracking-wider">
+                        {isRtl ? 'تبديل الحساب التجريبي:' : 'Switch Branch:'}
                       </p>
-                      <div className="space-y-1">
+
+                      <div className="space-y-0.5">
                         {Object.entries(DEMO_USERS).map(([emailKey, u]) => (
                           <button
                             key={emailKey}
                             onClick={() => {
                               loginDemoAccount(emailKey);
-                              setShowDemoSwitchMenu(false);
+                              setShowUserDropdown(false);
                             }}
-                            className={`w-full text-right p-2 rounded-xl text-xs transition flex flex-col ${
+                            className={`w-full text-right rtl:text-right ltr:text-left p-1.5 rounded-lg text-xs transition flex flex-col ${
                               userProfile?.email === u.email 
-                                ? 'bg-emerald-50 font-bold text-emerald-900 border border-emerald-200'
+                                ? 'bg-emerald-50 font-bold text-emerald-900'
                                 : 'hover:bg-slate-50 text-slate-700'
                             }`}
                           >
-                            <span className="font-bold">{u.displayName}</span>
-                            <span className="text-[10px] text-slate-500">{u.branchName}</span>
+                            <span className="font-semibold">{u.displayName}</span>
+                            <span className="text-[10px] text-slate-400">{u.branchName}</span>
                           </button>
                         ))}
                       </div>
@@ -185,7 +165,7 @@ export default function Navbar() {
                       <div className="pt-2 mt-2 border-t border-slate-100">
                         <button
                           onClick={handleLogout}
-                          className="w-full p-2 text-red-700 hover:bg-red-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
+                          className="w-full p-2 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
                         >
                           <LogOut className="w-3.5 h-3.5" />
                           <span>{isRtl ? 'تسجيل الخروج' : 'Log Out'}</span>
@@ -197,9 +177,9 @@ export default function Navbar() {
               ) : (
                 <Link
                   to="/login"
-                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-xs transition"
+                  className="bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold px-3.5 py-1.5 rounded-xl transition"
                 >
-                  {isRtl ? 'تسجيل الدخول' : 'Sign In'}
+                  {isRtl ? 'دخول' : 'Sign In'}
                 </Link>
               )}
             </div>
@@ -208,10 +188,10 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Bar */}
       {currentUser && (
         <nav className="fixed bottom-0 inset-x-0 z-40 bg-white border-t border-slate-200 md:hidden shadow-lg" style={{ paddingBottom: 'env(safe-area-inset-bottom, 0px)' }}>
-          <div className="flex justify-around items-center h-14 px-1 max-w-md mx-auto">
+          <div className="flex justify-around items-center h-14 px-2 max-w-md mx-auto">
             
             <Link
               to="/dashboard"
@@ -220,8 +200,19 @@ export default function Navbar() {
               }`}
             >
               <Building2 className="w-5 h-5 mb-0.5" />
-              <span>{isRtl ? 'الرئيسية' : 'Home'}</span>
+              <span>{isRtl ? 'الرئيسية' : 'Feed'}</span>
             </Link>
+
+            {/* Elevated Center 1-Tap Post Button */}
+            <button
+              onClick={() => setShowPostModal(true)}
+              className="flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold text-emerald-800 active:scale-95 transition"
+            >
+              <div className="w-10 h-10 rounded-full bg-emerald-800 text-white flex items-center justify-center -mt-5 shadow-md border-2 border-white">
+                <PlusCircle className="w-5 h-5" />
+              </div>
+              <span className="mt-0.5">{isRtl ? 'طلب مساعدة' : 'Post'}</span>
+            </button>
 
             <Link
               to="/map"
@@ -232,17 +223,6 @@ export default function Navbar() {
               <MapIcon className="w-5 h-5 mb-0.5" />
               <span>{isRtl ? 'الخريطة' : 'Map'}</span>
             </Link>
-
-            {/* Broadcast Action Center Button */}
-            <button
-              onClick={() => setShowPostModal(true)}
-              className="flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold text-emerald-800 active:scale-95 transition"
-            >
-              <div className="w-9 h-9 rounded-full bg-emerald-800 text-white flex items-center justify-center -mt-4 shadow-md border-2 border-white">
-                <PlusCircle className="w-5 h-5" />
-              </div>
-              <span className="mt-0.5">{isRtl ? 'طلب مساعدة' : 'Post Need'}</span>
-            </button>
 
             {isSuperAdmin && (
               <Link
@@ -259,7 +239,7 @@ export default function Navbar() {
         </nav>
       )}
 
-      {/* Broadcast Need Modal */}
+      {/* Post Need Modal */}
       {showPostModal && (
         <PostNeedModal
           isOpen={showPostModal}
