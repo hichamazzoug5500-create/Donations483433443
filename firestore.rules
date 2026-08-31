@@ -6,42 +6,29 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function isSuperAdmin() {
-      return isAuth() && (
-        request.auth.token.email == 'admin@hopelink.dz' ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
-      );
-    }
-
     // 1. Organizations Collection
     match /organizations/{orgId} {
-      allow read: if isAuth();
-      allow write: if isAuth();
+      allow read, write: if isAuth();
     }
 
     // 2. Branches Collection
     match /branches/{branchId} {
-      allow read: if isAuth();
-      allow write: if isAuth();
+      allow read, write: if isAuth();
     }
 
     // 3. Users Collection
     match /users/{userId} {
-      allow read: if isAuth();
-      allow write: if isAuth();
+      allow read, write: if isAuth();
     }
 
     // 4. Needs (Aid Requests)
     match /needs/{needId} {
-      allow read: if isAuth();
-      allow create, update, delete: if isAuth();
+      allow read, write: if isAuth();
     }
 
     // 5. Dispatches (Aid sent between branches)
     match /dispatches/{dispatchId} {
-      allow read: if isAuth();
-      allow create, update, delete: if isAuth();
+      allow read, write: if isAuth();
     }
 
     // 6. In-App Notifications Subcollection
