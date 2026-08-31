@@ -206,7 +206,7 @@ export default function PostNeedModal({ isOpen, onClose, initialData = null }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  {isRtl ? 'الكمية المطلوبة (اختياري)' : 'Quantity (Optional)'}
+                  {isRtl ? 'الكمية التقديرية المطلوبة' : 'Required Quantity'}
                 </label>
                 <input
                   type="text"

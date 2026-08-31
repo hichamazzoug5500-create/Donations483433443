@@ -279,7 +279,7 @@ export default function RequestDetailModal({ isOpen, onClose, request }) {
                       {/* Estimated Arrival */}
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                          {isRtl ? 'الموعد المتوقع للتسليم (اختياري)' : 'Estimated Delivery Time (Optional)'}
+                          {isRtl ? 'الموعد التقديري لوصول القافلة' : 'Estimated Convoy Arrival'}
                         </label>
                         <input
                           type="text"
