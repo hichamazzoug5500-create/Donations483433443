@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MapPin, Phone, Building2, AlertTriangle, Truck, Package } from 'lucide-react';
+import { MapPin, Phone, Building2, Package } from 'lucide-react';
 import { useLanguage } from '../context/LanguageContext';
 
 // Fix Leaflet marker icons
@@ -12,9 +12,8 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Marker icon for disaster relief needs
-const createNeedIcon = (priority = 'P2_urgent') => {
-  const color = priority === 'P1_critical' ? '#e11d48' : priority === 'P2_urgent' ? '#f59e0b' : '#2563eb';
+const createNeedIcon = (urgency = 'high') => {
+  const color = urgency === 'high' ? '#e11d48' : urgency === 'medium' ? '#f59e0b' : '#2563eb';
   const svg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="${color}" width="34" height="34" stroke="#ffffff" stroke-width="2">
       <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>
@@ -29,7 +28,6 @@ const createNeedIcon = (priority = 'P2_urgent') => {
   });
 };
 
-// Marker icon for branch headquarters and hubs
 const createBranchIcon = (status = 'active') => {
   const isDisaster = status === 'disaster_zone';
   const color = isDisaster ? '#dc2626' : '#059669';
@@ -70,7 +68,6 @@ export default function MapView({
   const validNeeds = needs.filter(n => n.location && typeof n.location.lat === 'number' && typeof n.location.lng === 'number');
   const validBranches = branches.filter(b => b.location && typeof b.location.lat === 'number' && typeof b.location.lng === 'number');
 
-  // Default Center: Blida / Algiers area
   const defaultCenter = [36.5500, 3.0000];
   const mapCenter = validNeeds.length > 0
     ? [validNeeds[0].location.lat, validNeeds[0].location.lng]
@@ -79,7 +76,7 @@ export default function MapView({
     : defaultCenter;
 
   return (
-    <div className="w-full h-full min-h-[450px] relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-800 shadow-inner">
+    <div className="w-full h-full min-h-[450px] relative rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
       <MapContainer
         center={mapCenter}
         zoom={zoomLevel}
@@ -93,7 +90,7 @@ export default function MapView({
 
         <MapRecenter center={mapCenter} zoom={zoomLevel} />
 
-        {/* 1. Branch Markers */}
+        {/* Branch Markers */}
         {validBranches.map((branch) => {
           const isDisaster = branch.status === 'disaster_zone';
           return (
@@ -103,12 +100,12 @@ export default function MapView({
               icon={createBranchIcon(branch.status)}
             >
               <Popup>
-                <div className="p-1 space-y-1.5 min-w-[200px] text-right" dir={isRtl ? 'rtl' : 'ltr'}>
+                <div className="p-1 space-y-1 min-w-[180px] text-right" dir={isRtl ? 'rtl' : 'ltr'}>
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] font-bold text-emerald-600">
+                    <span className="text-[10px] font-bold text-emerald-800">
                       {branch.orgName}
                     </span>
-                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${isDisaster ? 'bg-rose-600' : 'bg-emerald-600'}`}>
+                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded text-white ${isDisaster ? 'bg-red-600' : 'bg-emerald-700'}`}>
                       {isDisaster ? (isRtl ? 'منطقة طوارئ' : 'Disaster') : (isRtl ? 'فرع نشط' : 'Active')}
                     </span>
                   </div>
@@ -132,51 +129,47 @@ export default function MapView({
           );
         })}
 
-        {/* 2. Need Emergency Markers */}
+        {/* Need Markers */}
         {validNeeds.map((need) => {
-          const totalQty = (need.items || []).reduce((acc, it) => acc + (Number(it.quantity) || 0), 0);
-          const totalFulfilled = (need.items || []).reduce((acc, it) => acc + (Number(it.quantityFulfilled) || 0), 0);
-          const percent = totalQty > 0 ? Math.min(100, Math.round((totalFulfilled / totalQty) * 100)) : 0;
-
+          const title = need.needDescription || need.title || '';
           return (
             <Marker
               key={need.id}
               position={[need.location.lat, need.location.lng]}
-              icon={createNeedIcon(need.priority)}
+              icon={createNeedIcon(need.urgency)}
             >
               <Popup>
-                <div className="p-1 space-y-2 min-w-[220px] text-right" dir={isRtl ? 'rtl' : 'ltr'}>
+                <div className="p-1 space-y-1.5 min-w-[200px] text-right" dir={isRtl ? 'rtl' : 'ltr'}>
                   <div className="flex items-center justify-between gap-1">
-                    <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-rose-600 text-white">
-                      {need.priority}
+                    <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-red-600 text-white">
+                      {need.urgency === 'high' ? (isRtl ? 'عاجل' : 'Urgent') : (isRtl ? 'مستمر' : 'Open')}
                     </span>
                     <span className="text-[10px] text-slate-500 font-bold">
-                      {need.disasterType}
+                      {need.category}
                     </span>
                   </div>
 
-                  <h4 className="font-bold text-slate-900 text-xs leading-snug">
-                    {need.title}
+                  <h4 className="font-bold text-slate-900 text-xs line-clamp-2">
+                    {title}
                   </h4>
 
                   <p className="text-[11px] text-slate-600">
-                    🏢 {need.branchName} ({need.orgName})
+                    🏢 {need.branchName || need.orgName}
                   </p>
 
-                  <div className="text-[10px] text-slate-500 bg-slate-50 p-1.5 rounded">
-                    <span>{isRtl ? 'نسبة الاستجابة' : 'Fulfillment'}: <strong>{percent}%</strong></span>
-                    <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden mt-1">
-                      <div className="bg-emerald-500 h-full rounded-full" style={{ width: `${percent}%` }} />
-                    </div>
-                  </div>
+                  {need.quantity && (
+                    <p className="text-[10px] font-bold text-emerald-900 bg-emerald-50 p-1 rounded">
+                      {isRtl ? 'الكمية:' : 'Qty:'} {need.quantity}
+                    </p>
+                  )}
 
                   {onSelectNeed && (
                     <button
                       onClick={() => onSelectNeed(need.id)}
-                      className="w-full mt-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs py-1.5 px-3 rounded-lg shadow-sm flex items-center justify-center gap-1 transition"
+                      className="w-full mt-1.5 bg-emerald-800 hover:bg-emerald-900 text-white font-bold text-xs py-1.5 px-3 rounded-lg shadow-xs flex items-center justify-center gap-1 transition"
                     >
                       <Package className="w-3 h-3" />
-                      <span>{isRtl ? 'عرض تفاصيل النداء والقوافل' : 'View Need & Convoys'}</span>
+                      <span>{isRtl ? 'عرض الطلب' : 'View Need'}</span>
                     </button>
                   )}
                 </div>

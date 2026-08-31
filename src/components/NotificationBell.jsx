@@ -1,15 +1,14 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Check, CheckCheck, Truck, AlertTriangle, Info, Clock, X } from 'lucide-react';
+import { Bell, CheckCheck, Truck, AlertTriangle, Info, Clock } from 'lucide-react';
 import { useData } from '../context/DataContext';
 import { useLanguage } from '../context/LanguageContext';
 
 export default function NotificationBell({ onSelectNeed }) {
   const { notifications, unreadNotifsCount, markNotificationRead, markAllNotificationsRead } = useData();
-  const { isRtl, t } = useLanguage();
+  const { isRtl } = useLanguage();
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -27,11 +26,11 @@ export default function NotificationBell({ onSelectNeed }) {
       case 'dispatch_pledged':
       case 'dispatch_status_update':
       case 'dispatch_delivered':
-        return <Truck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />;
+        return <Truck className="w-4 h-4 text-emerald-700" />;
       case 'new_need':
-        return <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400" />;
+        return <AlertTriangle className="w-4 h-4 text-red-600" />;
       default:
-        return <Info className="w-4 h-4 text-blue-600 dark:text-blue-400" />;
+        return <Info className="w-4 h-4 text-blue-600" />;
     }
   };
 
@@ -52,15 +51,14 @@ export default function NotificationBell({ onSelectNeed }) {
       {/* Bell Trigger Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        className="relative p-2 rounded-xl text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition min-h-[36px] min-w-[36px] flex items-center justify-center border border-slate-200"
         title={isRtl ? 'الإشعارات' : 'Notifications'}
-        aria-label="Notifications"
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="w-4 h-4" />
         {unreadNotifsCount > 0 && (
-          <span className="absolute top-1.5 right-1.5 flex h-4 w-4">
-            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-rose-400 opacity-75"></span>
-            <span className="relative inline-flex rounded-full h-4 w-4 bg-rose-600 text-white text-[10px] font-bold items-center justify-center">
+          <span className="absolute -top-1 -right-1 flex h-4 w-4">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-4 w-4 bg-red-600 text-white text-[9px] font-bold items-center justify-center">
               {unreadNotifsCount > 9 ? '9+' : unreadNotifsCount}
             </span>
           </span>
@@ -70,17 +68,17 @@ export default function NotificationBell({ onSelectNeed }) {
       {/* Dropdown Menu */}
       {isOpen && (
         <div 
-          className={`absolute ${isRtl ? 'left-0 sm:left-auto sm:right-0' : 'right-0'} mt-2 w-80 sm:w-96 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 z-50 overflow-hidden transform transition-all animate-in fade-in slide-in-from-top-2`}
+          className={`absolute ${isRtl ? 'left-0 sm:left-auto sm:right-0' : 'right-0'} mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-200 z-50 overflow-hidden animate-in fade-in`}
         >
           {/* Header */}
-          <div className="px-4 py-3 bg-slate-50 dark:bg-slate-800/80 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+          <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Bell className="w-4 h-4 text-emerald-600" />
-              <h3 className="text-sm font-bold text-slate-800 dark:text-slate-100">
+              <Bell className="w-4 h-4 text-emerald-800" />
+              <h3 className="text-xs font-bold text-slate-900">
                 {isRtl ? 'إشعارات الإغاثة' : 'Relief Alerts'}
               </h3>
               {unreadNotifsCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 text-xs font-semibold">
+                <span className="px-1.5 py-0.5 rounded-full bg-red-100 text-red-800 text-[10px] font-bold">
                   {unreadNotifsCount}
                 </span>
               )}
@@ -89,7 +87,7 @@ export default function NotificationBell({ onSelectNeed }) {
             {unreadNotifsCount > 0 && (
               <button
                 onClick={markAllNotificationsRead}
-                className="text-xs text-emerald-600 hover:text-emerald-700 dark:text-emerald-400 flex items-center gap-1 font-medium transition"
+                className="text-[11px] text-emerald-800 hover:underline flex items-center gap-1 font-bold"
               >
                 <CheckCheck className="w-3.5 h-3.5" />
                 <span>{isRtl ? 'قراءة الكل' : 'Mark all read'}</span>
@@ -98,11 +96,11 @@ export default function NotificationBell({ onSelectNeed }) {
           </div>
 
           {/* Notifications List */}
-          <div className="max-h-80 overflow-y-auto divide-y divide-slate-100 dark:divide-slate-800">
+          <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
             {notifications.length === 0 ? (
-              <div className="py-8 text-center text-slate-400 dark:text-slate-500">
+              <div className="py-8 text-center text-slate-400">
                 <Bell className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                <p className="text-xs">{isRtl ? 'لا توجد إشعارات جديدة حالياً' : 'No notifications yet'}</p>
+                <p className="text-xs">{isRtl ? 'لا توجد إشعارات جديدة' : 'No notifications'}</p>
               </div>
             ) : (
               notifications.map((notif) => (
@@ -115,29 +113,29 @@ export default function NotificationBell({ onSelectNeed }) {
                       setIsOpen(false);
                     }
                   }}
-                  className={`p-3.5 flex items-start gap-3 cursor-pointer transition-colors ${
+                  className={`p-3.5 flex items-start gap-3 cursor-pointer transition ${
                     notif.isRead 
-                      ? 'bg-white dark:bg-slate-900 opacity-75 hover:bg-slate-50 dark:hover:bg-slate-800/50' 
-                      : 'bg-emerald-50/40 dark:bg-emerald-950/20 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                      ? 'bg-white opacity-70 hover:bg-slate-50' 
+                      : 'bg-emerald-50/50 hover:bg-emerald-50'
                   }`}
                 >
-                  <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 shrink-0 mt-0.5">
+                  <div className="p-2 rounded-xl bg-white border border-slate-200 shrink-0 mt-0.5 shadow-2xs">
                     {getIconForType(notif.type)}
                   </div>
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between gap-1 mb-0.5">
-                      <p className="text-xs font-bold text-slate-900 dark:text-slate-100 truncate">
+                      <p className="text-xs font-bold text-slate-900 truncate">
                         {notif.title}
                       </p>
                       {!notif.isRead && (
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                        <span className="w-2 h-2 rounded-full bg-emerald-600 shrink-0" />
                       )}
                     </div>
-                    <p className="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed">
+                    <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed">
                       {notif.body}
                     </p>
-                    <div className="flex items-center gap-1 mt-1.5 text-[10px] text-slate-400">
+                    <div className="flex items-center gap-1 mt-1 text-[10px] text-slate-400">
                       <Clock className="w-3 h-3" />
                       <span>{formatTimeAgo(notif.createdAt)}</span>
                     </div>
@@ -151,3 +149,5 @@ export default function NotificationBell({ onSelectNeed }) {
     </div>
   );
 }
+
+export { NotificationBell };

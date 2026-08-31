@@ -34,18 +34,18 @@ const MapRecenter = ({ center }) => {
 };
 
 export const LocationPicker = ({ lat, lng, city, address, value, onChange }) => {
-  const { isRtl, isRTL } = useLanguage();
+  const { isRtl } = useLanguage();
   const [isLocatingGPS, setIsLocatingGPS] = useState(false);
   const [isSearchingOSM, setIsSearchingOSM] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [statusMsg, setStatusMsg] = useState({ type: '', text: '' });
 
-  const effectiveLat = Number(value?.lat ?? lat) || 36.4700; // Default Blida/Algiers
+  const effectiveLat = Number(value?.lat ?? lat) || 36.4700;
   const effectiveLng = Number(value?.lng ?? lng) || 2.8300;
   const effectiveAddress = value?.address ?? address ?? '';
 
-  // Perform reverse geocoding via free OpenStreetMap Nominatim API
+  // Reverse geocoding via free OpenStreetMap Nominatim API
   const reverseGeocode = async (latitude, longitude) => {
     try {
       const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=${isRtl ? 'ar' : 'en'}`);
@@ -61,7 +61,6 @@ export const LocationPicker = ({ lat, lng, city, address, value, onChange }) => 
     return null;
   };
 
-  // Handle map click or coordinate update
   const handleSelectCoords = async (latitude, longitude) => {
     setStatusMsg({ type: 'info', text: isRtl ? 'جاري تحديد العنوان...' : 'Detecting address...' });
     const geocodeResult = await reverseGeocode(latitude, longitude);
@@ -79,7 +78,6 @@ export const LocationPicker = ({ lat, lng, city, address, value, onChange }) => 
     setTimeout(() => setStatusMsg({ type: '', text: '' }), 3000);
   };
 
-  // GPS Auto-Detection button handler
   const handleGPSDetect = () => {
     if (!navigator.geolocation) {
       setStatusMsg({ type: 'error', text: isRtl ? 'تحديد الموقع غير مدعوم في متصفحك' : 'Geolocation not supported' });
@@ -104,7 +102,6 @@ export const LocationPicker = ({ lat, lng, city, address, value, onChange }) => 
     );
   };
 
-  // OpenStreetMap Nominatim free search
   const handleOSMSearch = async (e) => {
     e.preventDefault();
     if (!searchQuery.trim()) return;
@@ -145,19 +142,19 @@ export const LocationPicker = ({ lat, lng, city, address, value, onChange }) => 
   };
 
   return (
-    <div className="space-y-2.5 bg-slate-50 dark:bg-slate-800/40 p-3 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800">
+    <div className="space-y-2.5 bg-slate-50 p-3 sm:p-4 rounded-2xl border border-slate-200">
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-          <MapPin className="w-3.5 h-3.5 text-rose-500" />
-          <span>{isRtl ? 'انقر على الخريطة لتحديد نقطة التجمع / المستودع' : 'Click on map to pin exact site'}</span>
+        <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+          <MapPin className="w-3.5 h-3.5 text-emerald-800" />
+          <span>{isRtl ? 'انقر على الخريطة لتحديد نقطة الاستلام بدقة' : 'Click on map to pin exact site'}</span>
         </span>
 
-        {/* Free GPS Auto Location Button */}
+        {/* GPS Auto Location Button */}
         <button
           type="button"
           onClick={handleGPSDetect}
           disabled={isLocatingGPS}
-          className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition"
+          className="flex items-center gap-1.5 bg-emerald-800 hover:bg-emerald-900 active:bg-slate-950 text-white font-bold text-xs px-3 py-1.5 rounded-xl shadow-xs transition min-h-[36px]"
         >
           {isLocatingGPS ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Navigation className="w-3.5 h-3.5" />}
           <span>{isRtl ? 'تحديد موقعي الحالي (GPS)' : 'Auto-Detect (GPS)'}</span>
@@ -166,8 +163,8 @@ export const LocationPicker = ({ lat, lng, city, address, value, onChange }) => 
 
       {statusMsg.text && (
         <div className={`p-2 rounded-xl text-xs font-semibold flex items-center gap-1.5 ${
-          statusMsg.type === 'success' ? 'bg-emerald-100 text-emerald-900 dark:bg-emerald-950 dark:text-emerald-300' :
-          statusMsg.type === 'error' ? 'bg-rose-100 text-rose-900 dark:bg-rose-950 dark:text-rose-300' : 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-200'
+          statusMsg.type === 'success' ? 'bg-emerald-100 text-emerald-900' :
+          statusMsg.type === 'error' ? 'bg-red-100 text-red-900' : 'bg-slate-200 text-slate-800'
         }`}>
           {statusMsg.type === 'success' ? <CheckCircle className="w-3.5 h-3.5" /> : <AlertCircle className="w-3.5 h-3.5" />}
           <span>{statusMsg.text}</span>
@@ -184,26 +181,26 @@ export const LocationPicker = ({ lat, lng, city, address, value, onChange }) => 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={isRtl ? 'ابحث عن بلدية، حي أو شارع في الجزائر...' : 'Search street or municipality in Algeria...'}
-              className="w-full pl-8 pr-3 rtl:pr-8 rtl:pl-3 py-2 rounded-xl border border-slate-300 dark:border-slate-700 text-xs bg-white dark:bg-slate-900 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full pl-8 pr-3 rtl:pr-8 rtl:pl-3 py-2 rounded-xl border border-slate-300 text-xs bg-white text-slate-900 outline-none focus:ring-2 focus:ring-emerald-700 min-h-[38px]"
             />
           </div>
           <button
             type="submit"
             disabled={isSearchingOSM}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition shrink-0"
+            className="px-4 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition shrink-0 min-h-[38px]"
           >
             {isSearchingOSM ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : (isRtl ? 'بحث' : 'Search')}
           </button>
         </form>
 
         {searchResults.length > 0 && (
-          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-xl max-h-44 overflow-y-auto">
+          <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white rounded-2xl border border-slate-200 shadow-xl max-h-44 overflow-y-auto">
             {searchResults.map((item, idx) => (
               <button
                 key={idx}
                 type="button"
                 onClick={() => handleSelectSearchResult(item)}
-                className="w-full text-left rtl:text-right px-3.5 py-2.5 text-xs hover:bg-emerald-50 dark:hover:bg-emerald-950/40 border-b border-slate-100 dark:border-slate-800 text-slate-800 dark:text-slate-200 truncate block"
+                className="w-full text-left rtl:text-right px-3.5 py-2.5 text-xs hover:bg-emerald-50 border-b border-slate-100 text-slate-800 truncate block"
               >
                 {item.display_name}
               </button>
@@ -213,7 +210,7 @@ export const LocationPicker = ({ lat, lng, city, address, value, onChange }) => 
       </div>
 
       {/* Leaflet Map Picker */}
-      <div className="h-44 sm:h-52 w-full rounded-2xl overflow-hidden border border-slate-300 dark:border-slate-700 relative shadow-inner">
+      <div className="h-44 sm:h-52 w-full rounded-2xl overflow-hidden border border-slate-300 relative shadow-inner">
         <MapContainer
           center={[effectiveLat, effectiveLng]}
           zoom={12}
@@ -221,7 +218,7 @@ export const LocationPicker = ({ lat, lng, city, address, value, onChange }) => 
           className="w-full h-full"
         >
           <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+            attribution='&copy; OpenStreetMap'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
           <MapRecenter center={[effectiveLat, effectiveLng]} />
