@@ -8,14 +8,11 @@ import {
   onSnapshot, 
   serverTimestamp,
   getDocs,
-  setDoc
+  setDoc,
+  writeBatch
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from './AuthContext';
-import { 
-  DEMO_ORGANIZATIONS, 
-  DEMO_BRANCHES 
-} from '../data/mockReliefData';
 
 const DataContext = createContext(null);
 
@@ -28,7 +25,7 @@ export const useData = () => {
 };
 
 export const DataProvider = ({ children }) => {
-  const { userProfile, currentUser, isSuperAdmin } = useAuth();
+  const { userProfile, currentUser } = useAuth();
   
   const [organizations, setOrganizations] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -37,33 +34,6 @@ export const DataProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [systemUsers, setSystemUsers] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  // Auto-seed initial basic org & branches in Firestore if completely empty
-  const autoSeedInitialData = async () => {
-    try {
-      const orgsSnap = await getDocs(collection(db, 'organizations'));
-      if (orgsSnap.empty) {
-        for (const org of DEMO_ORGANIZATIONS) {
-          await setDoc(doc(db, 'organizations', org.id), org);
-        }
-      }
-
-      const branchesSnap = await getDocs(collection(db, 'branches'));
-      if (branchesSnap.empty) {
-        for (const branch of DEMO_BRANCHES) {
-          await setDoc(doc(db, 'branches', branch.id), branch);
-        }
-      }
-    } catch (err) {
-      console.warn("Auto-seed notice (requires auth):", err.message);
-    }
-  };
-
-  useEffect(() => {
-    if (currentUser?.uid) {
-      autoSeedInitialData();
-    }
-  }, [currentUser?.uid]);
 
   // Firestore Real-Time Listeners
   useEffect(() => {
@@ -136,10 +106,10 @@ export const DataProvider = ({ children }) => {
   // 1. NEEDS CRUD (Disaster Relief Needs)
   // ==========================================
   const createNeed = async (needData) => {
-    const orgId = userProfile?.orgId || 'org-crescent-dz';
-    const orgName = userProfile?.orgName || 'الهلال الأحمر الجزائري';
-    const branchId = userProfile?.branchId || 'branch-cra-blida';
-    const branchName = userProfile?.branchName || 'فرع ولاية البليدة';
+    const orgId = userProfile?.orgId || 'org-main';
+    const orgName = userProfile?.orgName || 'الجمعية الرئيسية';
+    const branchId = userProfile?.branchId || 'branch-main';
+    const branchName = userProfile?.branchName || userProfile?.displayName || 'الفرع الميداني';
 
     const payload = {
       orgId,
@@ -157,11 +127,11 @@ export const DataProvider = ({ children }) => {
       contactName: userProfile?.displayName || branchName,
       status: 'open',
       location: {
-        city: needData.location?.city || needData.city || 'البليدة',
-        wilaya: needData.location?.wilaya || needData.city || 'البليدة',
+        city: needData.location?.city || needData.city || 'الجزائر',
+        wilaya: needData.location?.wilaya || needData.city || 'الجزائر',
         address: needData.location?.address || needData.address || '',
-        lat: Number(needData.location?.lat ?? needData.lat) || 36.4700,
-        lng: Number(needData.location?.lng ?? needData.lng) || 2.8300
+        lat: Number(needData.location?.lat ?? needData.lat) || 36.7538,
+        lng: Number(needData.location?.lng ?? needData.lng) || 3.0588
       },
       items: needData.items || [
         {
@@ -194,7 +164,7 @@ export const DataProvider = ({ children }) => {
   const commitToNeed = async (needId, pledgeData) => {
     const targetNeed = needs.find(n => n.id === needId);
     const donorBranchName = userProfile?.branchName || userProfile?.orgName || 'فرع متطوع';
-    const donorBranchId = userProfile?.branchId || 'branch-cra-algiers';
+    const donorBranchId = userProfile?.branchId || 'branch-donor';
 
     const updates = {
       status: 'in_progress',
@@ -240,15 +210,15 @@ export const DataProvider = ({ children }) => {
   // 2. DISPATCHES MANAGEMENT
   // ==========================================
   const createDispatch = async (dispatchData) => {
-    const fromOrgName = userProfile?.orgName || 'الهلال الأحمر الجزائري';
+    const fromOrgName = userProfile?.orgName || 'الجمعية';
     const fromBranchName = userProfile?.branchName || 'الفرع المرسل';
 
     const payload = {
-      orgId: userProfile?.orgId || 'org-crescent-dz',
+      orgId: userProfile?.orgId || 'org-main',
       fromOrgName,
-      fromBranchId: userProfile?.branchId || 'branch-cra-algiers',
+      fromBranchId: userProfile?.branchId || 'branch-main',
       fromBranchName,
-      toOrgId: dispatchData.toOrgId || userProfile?.orgId || 'org-crescent-dz',
+      toOrgId: dispatchData.toOrgId || userProfile?.orgId || 'org-main',
       toOrgName: dispatchData.toOrgName || fromOrgName,
       toBranchId: dispatchData.toBranchId || 'branch-dest',
       toBranchName: dispatchData.toBranchName || 'الفرع المستلم',
@@ -323,7 +293,7 @@ export const DataProvider = ({ children }) => {
   };
 
   // ==========================================
-  // 4. ADMIN CONTROLS
+  // 4. ADMIN CONTROLS (Orgs & Branches Management)
   // ==========================================
   const createOrganization = async (orgData) => {
     const payload = {
@@ -338,20 +308,24 @@ export const DataProvider = ({ children }) => {
     return docRef.id;
   };
 
+  const deleteOrganization = async (orgId) => {
+    await deleteDoc(doc(db, 'organizations', orgId));
+  };
+
   const createBranch = async (branchData) => {
     const payload = {
       orgId: branchData.orgId,
-      orgName: branchData.orgName || 'الهلال الأحمر الجزائري',
+      orgName: branchData.orgName || 'جمعية خيرية',
       name: branchData.name,
       wilaya: branchData.wilaya,
       address: branchData.address || '',
+      loginUsername: branchData.loginUsername || '',
       location: {
         lat: Number(branchData.location?.lat) || 36.7538,
         lng: Number(branchData.location?.lng) || 3.0588
       },
       phone: branchData.phone || '',
       status: branchData.status || 'active',
-      capabilities: branchData.capabilities || ['volunteers'],
       createdAt: serverTimestamp()
     };
 
@@ -359,8 +333,23 @@ export const DataProvider = ({ children }) => {
     return docRef.id;
   };
 
+  const deleteBranch = async (branchId) => {
+    await deleteDoc(doc(db, 'branches', branchId));
+  };
+
   const deleteAdminUser = async (userId) => {
     await deleteDoc(doc(db, 'users', userId));
+  };
+
+  // Wipes any dummy/old test collections
+  const purgeAllData = async () => {
+    const collectionsToPurge = ['organizations', 'branches', 'needs', 'dispatches'];
+    for (const colName of collectionsToPurge) {
+      const snap = await getDocs(collection(db, colName));
+      for (const d of snap.docs) {
+        await deleteDoc(d.ref);
+      }
+    }
   };
 
   const value = {
@@ -387,8 +376,11 @@ export const DataProvider = ({ children }) => {
     unreadNotifsCount: notifications.filter(n => !n.isRead).length,
 
     createOrganization,
+    deleteOrganization,
     createBranch,
-    deleteAdminUser
+    deleteBranch,
+    deleteAdminUser,
+    purgeAllData
   };
 
   return (

@@ -3,15 +3,15 @@ import {
   ShieldCheck, 
   Building2, 
   MapPin, 
-  Users, 
-  Package, 
-  AlertTriangle, 
   Plus, 
   Trash2, 
   KeyRound,
-  Truck,
-  Activity,
-  Layers
+  User,
+  Layers,
+  CheckCircle,
+  AlertTriangle,
+  RotateCcw,
+  Sparkles
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../context/DataContext';
@@ -19,48 +19,38 @@ import { useLanguage } from '../context/LanguageContext';
 import { ALGERIA_WILAYAS } from '../data/algeriaWilayas';
 
 export default function AdminPanel() {
-  const { userProfile, isSuperAdmin, createNewStaffAccount } = useAuth();
+  const { isSuperAdmin, createNewStaffAccount } = useAuth();
   const { 
     organizations, 
     branches, 
     needs, 
-    dispatches, 
-    systemUsers, 
     createOrganization, 
+    deleteOrganization,
     createBranch, 
-    deleteAdminUser,
-    deleteNeed
+    deleteBranch,
+    deleteNeed,
+    purgeAllData
   } = useData();
   const { isRtl } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState('overview');
+  const [activeTab, setActiveTab] = useState('orgs'); // 'orgs' | 'branches' | 'needs' | 'maintenance'
   const [showOrgModal, setShowOrgModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
-  const [showUserModal, setShowUserModal] = useState(false);
 
-  // Form States
-  const [orgForm, setOrgForm] = useState({ name: '', nameEn: '', type: 'ngo', allowCrossOrg: true });
+  // Forms
+  const [orgForm, setOrgForm] = useState({ name: '', nameEn: '', type: 'ngo' });
   const [branchForm, setBranchForm] = useState({
     orgId: '',
     name: '',
-    wilaya: 'الجزائر العاصمة',
+    wilaya: 'البليدة',
     address: '',
     phone: '',
-    status: 'active',
-    capabilities: ['warehouse', 'volunteers'],
-    location: { lat: 36.7538, lng: 3.0588 }
-  });
-  const [userForm, setUserForm] = useState({
-    email: '',
-    password: 'password123',
-    displayName: '',
-    phone: '',
-    role: 'branch_member',
-    orgId: '',
-    branchId: ''
+    username: '',
+    password: ''
   });
 
   const [saving, setSaving] = useState(false);
+  const [createdBranchInfo, setCreatedBranchInfo] = useState(null);
 
   if (!isSuperAdmin) {
     return (
@@ -68,19 +58,17 @@ export default function AdminPanel() {
         <div className="p-4 rounded-full bg-red-100 text-red-600 mb-4">
           <ShieldCheck className="w-12 h-12" />
         </div>
-        <h2 className="text-2xl font-bold text-slate-800 mb-2">
+        <h2 className="text-xl font-bold text-slate-800 mb-2">
           {isRtl ? 'صلاحيات وصول مقيدة' : 'Restricted Access'}
         </h2>
         <p className="text-slate-600 max-w-md text-xs">
-          {isRtl 
-            ? 'لوحة التحكم المركزية مخصصة للمسؤولين العامين للمنظومة فقط (Super Admin).' 
-            : 'The central administration panel is restricted to system Super Administrators only.'}
+          {isRtl ? 'لوحة التحكم مخصصة لحساب المشرف العام فقط.' : 'This panel is restricted to the Super Admin.'}
         </p>
       </div>
     );
   }
 
-  // Handle Organization Creation
+  // 1. Create Organization
   const handleCreateOrg = async (e) => {
     e.preventDefault();
     if (!orgForm.name.trim()) return;
@@ -88,7 +76,7 @@ export default function AdminPanel() {
     try {
       await createOrganization(orgForm);
       setShowOrgModal(false);
-      setOrgForm({ name: '', nameEn: '', type: 'ngo', allowCrossOrg: true });
+      setOrgForm({ name: '', nameEn: '', type: 'ngo' });
     } catch (err) {
       alert("Error: " + err.message);
     } finally {
@@ -96,341 +84,408 @@ export default function AdminPanel() {
     }
   };
 
-  // Handle Branch Creation
+  // 2. Create Branch + Create its Login Credentials
   const handleCreateBranch = async (e) => {
     e.preventDefault();
-    if (!branchForm.name.trim() || !branchForm.orgId) return;
+    if (!branchForm.name.trim() || !branchForm.orgId || !branchForm.username.trim() || !branchForm.password) {
+      alert(isRtl ? 'يرجى ملء جميع الحقول بما في ذلك اسم المستخدم وكلمة المرور' : 'Please fill all fields including username and password');
+      return;
+    }
+
     setSaving(true);
     try {
       const selectedOrg = organizations.find(o => o.id === branchForm.orgId);
-      await createBranch({
-        ...branchForm,
-        orgName: selectedOrg ? selectedOrg.name : 'الهلال الأحمر الجزائري'
+      const cleanUsername = branchForm.username.trim().toLowerCase();
+      const loginEmail = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername}@hopelink.dz`;
+
+      // 1. Create Branch record in Firestore
+      const branchId = await createBranch({
+        orgId: branchForm.orgId,
+        orgName: selectedOrg ? selectedOrg.name : 'الجمعية',
+        name: branchForm.name,
+        wilaya: branchForm.wilaya,
+        address: branchForm.address,
+        phone: branchForm.phone,
+        loginUsername: cleanUsername
       });
+
+      // 2. Create Login Account in Firebase Auth & Firestore Users
+      await createNewStaffAccount({
+        email: loginEmail,
+        password: branchForm.password,
+        displayName: branchForm.name,
+        role: 'branch_member',
+        orgId: branchForm.orgId,
+        orgName: selectedOrg ? selectedOrg.name : 'الجمعية',
+        branchId: branchId,
+        branchName: branchForm.name,
+        phone: branchForm.phone
+      });
+
+      setCreatedBranchInfo({
+        branchName: branchForm.name,
+        orgName: selectedOrg?.name,
+        username: cleanUsername,
+        password: branchForm.password
+      });
+
       setShowBranchModal(false);
       setBranchForm({
         orgId: organizations[0]?.id || '',
         name: '',
-        wilaya: 'الجزائر العاصمة',
+        wilaya: 'البليدة',
         address: '',
         phone: '',
-        status: 'active',
-        capabilities: ['warehouse', 'volunteers'],
-        location: { lat: 36.7538, lng: 3.0588 }
+        username: '',
+        password: ''
       });
     } catch (err) {
-      alert("Error: " + err.message);
+      alert("Error creating branch account: " + err.message);
     } finally {
       setSaving(false);
     }
   };
 
-  // Handle User Creation
-  const handleCreateUser = async (e) => {
-    e.preventDefault();
-    if (!userForm.email.trim() || !userForm.displayName.trim() || !userForm.orgId) return;
-    setSaving(true);
-    try {
-      const selectedOrg = organizations.find(o => o.id === userForm.orgId);
-      const selectedBranch = branches.find(b => b.id === userForm.branchId);
-      await createNewStaffAccount({
-        ...userForm,
-        orgName: selectedOrg ? selectedOrg.name : 'الهلال الأحمر الجزائري',
-        branchName: selectedBranch ? selectedBranch.name : 'الفرع الميداني'
-      });
-      alert(isRtl ? 'تم إنشاء الحساب بنجاح! يمكن للمستخدم تسجيل الدخول الآن.' : 'User account created successfully!');
-      setShowUserModal(false);
-      setUserForm({
-        email: '',
-        password: 'password123',
-        displayName: '',
-        phone: '',
-        role: 'branch_member',
-        orgId: organizations[0]?.id || '',
-        branchId: ''
-      });
-    } catch (err) {
-      alert("Error: " + err.message);
-    } finally {
-      setSaving(false);
+  // 3. Purge all dummy data
+  const handlePurgeAll = async () => {
+    if (confirm(isRtl ? 'هل أنت متأكد من حذف وتصفير جميع البيانات السابقة؟' : 'Are you sure you want to clear all data?')) {
+      setSaving(true);
+      try {
+        await purgeAllData();
+        alert(isRtl ? 'تم حذف وتصفير كافة البيانات بنجاح!' : 'All data wiped successfully!');
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        setSaving(false);
+      }
     }
   };
-
-  const activeNeedsCount = needs.filter(n => n.status !== 'fulfilled' && n.status !== 'cancelled').length;
-  const inTransitDispatches = dispatches.filter(d => d.status === 'in_transit' || d.status === 'dispatched').length;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-in fade-in">
+    <div className="max-w-4xl mx-auto px-3 sm:px-6 py-6 space-y-5 animate-in fade-in">
+      
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <div className="p-1.5 rounded-xl bg-purple-700 text-white">
+            <div className="p-1.5 rounded-xl bg-purple-800 text-white">
               <ShieldCheck className="w-5 h-5" />
             </div>
-            <h1 className="text-xl sm:text-2xl font-black text-slate-900">
-              {isRtl ? 'لوحة الإدارة والتحكم' : 'Admin Hub'}
+            <h1 className="text-xl font-black text-slate-900">
+              {isRtl ? 'لوحة إدارة الجمعيات والفروع' : 'Organizations & Branches Hub'}
             </h1>
-            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold">
-              Super Admin
+            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[11px] font-bold">
+              Admin
             </span>
           </div>
           <p className="text-xs text-slate-500">
             {isRtl 
-              ? 'إدارة المنظمات الخيرية، الفروع، والحسابات المعتمدة.' 
-              : 'Manage charity organizations, branches, and authorized staff.'}
+              ? 'إنشاء الجمعيات، وتعيين الفروع وحسابات الدخول الخاصة بكل فرع.' 
+              : 'Create charities, attach branches, and issue login credentials.'}
           </p>
         </div>
 
-        {/* Tab Navigation */}
+        {/* Tab Controls */}
         <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto">
-          {[
-            { id: 'overview', label: isRtl ? 'نظرة عامة' : 'Overview', icon: Activity },
-            { id: 'orgs', label: isRtl ? 'المنظمات' : 'Orgs', icon: Building2 },
-            { id: 'branches', label: isRtl ? 'الفروع' : 'Branches', icon: MapPin },
-            { id: 'users', label: isRtl ? 'المستخدمين' : 'Users', icon: Users },
-            { id: 'data', label: isRtl ? 'النداءات' : 'Needs', icon: Layers }
-          ].map((tab) => {
-            const Icon = tab.icon;
-            const isActive = activeTab === tab.id;
-            return (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
-                  isActive
-                    ? 'bg-white text-purple-900 shadow-2xs'
-                    : 'text-slate-600 hover:text-slate-900'
-                }`}
-              >
-                <Icon className="w-3.5 h-3.5" />
-                <span>{tab.label}</span>
-              </button>
-            );
-          })}
+          <button
+            onClick={() => setActiveTab('orgs')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              activeTab === 'orgs' ? 'bg-white text-purple-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Building2 className="w-3.5 h-3.5" />
+            <span>{isRtl ? '1. الجمعيات' : '1. Charities'} ({organizations.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('branches')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              activeTab === 'branches' ? 'bg-white text-purple-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <MapPin className="w-3.5 h-3.5" />
+            <span>{isRtl ? '2. الفروع والحسابات' : '2. Branches & Logins'} ({branches.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('needs')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 ${
+              activeTab === 'needs' ? 'bg-white text-purple-900 shadow-2xs' : 'text-slate-600 hover:text-slate-900'
+            }`}
+          >
+            <Layers className="w-3.5 h-3.5" />
+            <span>{isRtl ? 'النداءات' : 'Needs'} ({needs.length})</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab('maintenance')}
+            className={`px-2.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1 ${
+              activeTab === 'maintenance' ? 'bg-white text-red-700 shadow-2xs' : 'text-slate-400 hover:text-red-600'
+            }`}
+            title={isRtl ? 'تصفير البيانات القديمة' : 'Clean data'}
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+          </button>
         </div>
       </div>
 
-      {/* 1. OVERVIEW TAB */}
-      {activeTab === 'overview' && (
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
-            <span className="text-[11px] font-bold text-slate-500 block mb-1">{isRtl ? 'المنظمات' : 'Orgs'}</span>
-            <p className="text-2xl font-black text-slate-900">{organizations.length}</p>
+      {/* Success Notification after Branch Creation */}
+      {createdBranchInfo && (
+        <div className="p-4 bg-emerald-50 border border-emerald-300 rounded-2xl space-y-2 animate-in fade-in">
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-xs text-emerald-900 flex items-center gap-1.5">
+              <CheckCircle className="w-4 h-4 text-emerald-700" />
+              <span>{isRtl ? 'تم إنشاء الفرع وحساب الدخول بنجاح!' : 'Branch and login account created!'}</span>
+            </span>
+            <button onClick={() => setCreatedBranchInfo(null)} className="text-xs text-slate-400 hover:text-slate-600">✕</button>
           </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
-            <span className="text-[11px] font-bold text-slate-500 block mb-1">{isRtl ? 'الفروع' : 'Branches'}</span>
-            <p className="text-2xl font-black text-slate-900">{branches.length}</p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
-            <span className="text-[11px] font-bold text-slate-500 block mb-1">{isRtl ? 'النداءات الحية' : 'Active Needs'}</span>
-            <p className="text-2xl font-black text-slate-900">{activeNeedsCount}</p>
-          </div>
-
-          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
-            <span className="text-[11px] font-bold text-slate-500 block mb-1">{isRtl ? 'القوافل' : 'Dispatches'}</span>
-            <p className="text-2xl font-black text-slate-900">{inTransitDispatches}</p>
+          <p className="text-xs text-emerald-950">
+            {isRtl ? 'يمكن لمنسق الفرع تسجيل الدخول عبر البيانات التالية:' : 'The branch coordinator can sign in using:'}
+          </p>
+          <div className="p-2.5 bg-white rounded-xl border border-emerald-200 text-xs font-mono flex flex-wrap gap-4 text-slate-800">
+            <span>👤 <strong>{isRtl ? 'اسم المستخدم:' : 'Username:'}</strong> {createdBranchInfo.username}</span>
+            <span>🔑 <strong>{isRtl ? 'كلمة المرور:' : 'Password:'}</strong> {createdBranchInfo.password}</span>
           </div>
         </div>
       )}
 
-      {/* 2. ORGANIZATIONS TAB */}
+      {/* ==================================================== */}
+      {/* 1. ORGANIZATIONS TAB */}
+      {/* ==================================================== */}
       {activeTab === 'orgs' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900">
-              {isRtl ? 'المنظمات والجمعيات' : 'Organizations'} ({organizations.length})
-            </h2>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">
+                {isRtl ? 'قائمة الجمعيات الإنسانية المسجلة' : 'Registered Charities'}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {isRtl ? 'أضف الجمعيات أولاً، ثم انتقل لتبويب الفروع لإنشاء الفروع التابعة لها.' : 'Add charities first, then add their branches in Tab 2.'}
+              </p>
+            </div>
             <button
               onClick={() => setShowOrgModal(true)}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isRtl ? 'إضافة منظمة' : 'Add Org'}</span>
+              <Plus className="w-4 h-4" />
+              <span>{isRtl ? 'إضافة جمعية جديدة' : 'Add Charity'}</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {organizations.map(org => (
-              <div key={org.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-slate-900">{org.name}</h3>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">{org.type}</span>
-                </div>
-                {org.nameEn && <p className="text-xs text-slate-400">{org.nameEn}</p>}
-              </div>
-            ))}
-          </div>
+          {organizations.length === 0 ? (
+            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 space-y-2">
+              <Building2 className="w-10 h-10 text-slate-300 mx-auto" />
+              <h3 className="text-sm font-bold text-slate-800">
+                {isRtl ? 'لا توجد جمعيات مضافة حالياً' : 'No charities added yet'}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {isRtl ? 'اضغط على زر "إضافة جمعية جديدة" في الأعلى للبدء.' : 'Click "Add Charity" above to create your first organization.'}
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {organizations.map(org => {
+                const orgBranchesCount = branches.filter(b => b.orgId === org.id).length;
+                return (
+                  <div key={org.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs flex items-center justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-800 flex items-center justify-center font-bold text-xs">
+                          <Building2 className="w-4 h-4" />
+                        </span>
+                        <h3 className="font-bold text-sm text-slate-900">{org.name}</h3>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {orgBranchesCount} {isRtl ? 'فروع تابعة' : 'branches'}
+                      </p>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (confirm(isRtl ? `حذف جمعية "${org.name}"؟` : `Delete ${org.name}?`)) {
+                          deleteOrganization(org.id);
+                        }
+                      }}
+                      className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+                      title={isRtl ? 'حذف' : 'Delete'}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
-      {/* 3. BRANCHES TAB */}
+      {/* ==================================================== */}
+      {/* 2. BRANCHES & LOGINS TAB */}
+      {/* ==================================================== */}
       {activeTab === 'branches' && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-bold text-slate-900">
-              {isRtl ? 'فروع الجمعيات' : 'Branch Locations'} ({branches.length})
-            </h2>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">
+                {isRtl ? 'فروع الجمعيات وحسابات الدخول' : 'Branch Locations & Logins'}
+              </h2>
+              <p className="text-xs text-slate-500">
+                {isRtl ? 'عند إنشاء فرع، قم بتحديد اسم المستخدم وكلمة المرور لتسليمها لمنسق الفرع.' : 'Assign a username and password to each branch.'}
+              </p>
+            </div>
+
             <button
               onClick={() => {
                 if (organizations.length === 0) {
-                  alert(isRtl ? "يرجى إضافة منظمة أولاً" : "Please create an organization first");
+                  alert(isRtl ? 'يرجى إضافة جمعية أولاً في التبويب 1' : 'Please add a charity first in Tab 1');
+                  setActiveTab('orgs');
                   return;
                 }
                 setBranchForm(prev => ({ ...prev, orgId: organizations[0].id }));
                 setShowBranchModal(true);
               }}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
             >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isRtl ? 'إضافة فرع' : 'Add Branch'}</span>
+              <Plus className="w-4 h-4" />
+              <span>{isRtl ? 'إضافة فرع وتعيين حساب الدخول' : 'Add Branch & Login'}</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {branches.map(branch => (
-              <div key={branch.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold text-sm text-slate-900">{branch.name}</h3>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">{branch.status}</span>
-                </div>
-                <p className="text-xs text-slate-500">📍 {branch.wilaya} {branch.address ? `— ${branch.address}` : ''}</p>
-                {branch.phone && <p className="text-xs text-slate-500 font-mono">📞 {branch.phone}</p>}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 4. USERS TAB */}
-      {activeTab === 'users' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-sm font-bold text-slate-900">
-                {isRtl ? 'حسابات المنسقين والمشرفين' : 'Staff Accounts'} ({systemUsers.length})
-              </h2>
-              <p className="text-[11px] text-slate-500">
-                {isRtl ? 'يمكنك إضافة حساب جديد وتعيين كلمة المرور الخاصة به.' : 'Create new coordinator accounts with passwords.'}
+          {branches.length === 0 ? (
+            <div className="p-8 text-center bg-white rounded-2xl border border-slate-200 space-y-2">
+              <MapPin className="w-10 h-10 text-slate-300 mx-auto" />
+              <h3 className="text-sm font-bold text-slate-800">
+                {isRtl ? 'لا توجد فروع مضافة حالياً' : 'No branches added yet'}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {isRtl ? 'أنشئ فرعاً وحدد اسم المستخدم وكلمة المرور للدخول.' : 'Create a branch and set its login credentials.'}
               </p>
             </div>
-            <button
-              onClick={() => {
-                setUserForm(prev => ({
-                  ...prev,
-                  orgId: organizations[0]?.id || 'org-crescent-dz',
-                  branchId: branches[0]?.id || 'branch-cra-blida'
-                }));
-                setShowUserModal(true);
-              }}
-              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
-            >
-              <Plus className="w-3.5 h-3.5" />
-              <span>{isRtl ? 'إضافة منسق' : 'Add User'}</span>
-            </button>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
-            <table className="w-full text-xs text-right">
-              <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
-                <tr>
-                  <th className="px-4 py-2.5">{isRtl ? 'الاسم والبريد' : 'Name & Email'}</th>
-                  <th className="px-4 py-2.5">{isRtl ? 'الفرع' : 'Branch'}</th>
-                  <th className="px-4 py-2.5">{isRtl ? 'الدور' : 'Role'}</th>
-                  <th className="px-4 py-2.5 text-center">{isRtl ? 'حذف' : 'Delete'}</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {systemUsers.map(u => (
-                  <tr key={u.uid || u.email} className="hover:bg-slate-50 transition">
-                    <td className="px-4 py-2.5">
-                      <p className="font-bold text-slate-900">{u.displayName}</p>
-                      <p className="text-slate-400 font-mono text-[11px]">{u.email}</p>
-                    </td>
-                    <td className="px-4 py-2.5 text-slate-600">
-                      {u.branchName || u.orgName || '—'}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        u.role === 'super_admin' ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800'
-                      }`}>
-                        {u.role}
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {branches.map(branch => (
+                <div key={branch.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-50 text-emerald-900 border border-emerald-200 inline-block mb-1">
+                        {branch.orgName}
                       </span>
-                    </td>
-                    <td className="px-4 py-2.5 text-center">
-                      {u.role !== 'super_admin' && (
-                        <button
-                          onClick={() => {
-                            if (confirm(isRtl ? `حذف ${u.displayName}؟` : `Delete ${u.displayName}?`)) {
-                              deleteAdminUser(u.uid);
-                            }
-                          }}
-                          className="p-1 text-red-500 hover:bg-red-50 rounded-lg"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      <h3 className="font-bold text-sm text-slate-900">{branch.name}</h3>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        if (confirm(isRtl ? `حذف فرع "${branch.name}"؟` : `Delete ${branch.name}?`)) {
+                          deleteBranch(branch.id);
+                        }
+                      }}
+                      className="p-1 text-red-500 hover:bg-red-50 rounded-lg transition"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="text-xs text-slate-500 space-y-0.5">
+                    <p>📍 {branch.wilaya} {branch.address ? `— ${branch.address}` : ''}</p>
+                    {branch.phone && <p>📞 {branch.phone}</p>}
+                  </div>
+
+                  {branch.loginUsername && (
+                    <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-600 font-mono">
+                      <span>👤 {isRtl ? 'اسم الدخول:' : 'Login:'} <strong className="text-slate-900">{branch.loginUsername}</strong></span>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* 5. DATA TAB */}
-      {activeTab === 'data' && (
+      {/* ==================================================== */}
+      {/* 3. NEEDS MANAGEMENT TAB */}
+      {/* ==================================================== */}
+      {activeTab === 'needs' && (
         <div className="space-y-3">
           <h2 className="text-sm font-bold text-slate-900">
-            {isRtl ? 'إدارة وحذف النداءات' : 'Manage Needs'} ({needs.length})
+            {isRtl ? 'إدارة نداءات المساعدة المنشورة' : 'Posted Relief Needs'} ({needs.length})
           </h2>
 
-          <div className="space-y-2">
-            {needs.map(n => (
-              <div key={n.id} className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs">
-                <div>
-                  <span className="font-bold text-slate-900 block">{n.title || n.needDescription}</span>
-                  <span className="text-slate-500">{n.branchName} • {n.location?.city || n.location?.wilaya}</span>
+          {needs.length === 0 ? (
+            <p className="text-xs text-slate-400 py-6 text-center">{isRtl ? 'لا توجد نداءات منشورة' : 'No posted needs'}</p>
+          ) : (
+            <div className="space-y-2">
+              {needs.map(n => (
+                <div key={n.id} className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                  <div>
+                    <span className="font-bold text-slate-900 block">{n.title || n.needDescription}</span>
+                    <span className="text-slate-500">{n.branchName} • {n.location?.city || n.location?.wilaya}</span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      if (confirm(isRtl ? 'حذف هذا الطلب؟' : 'Delete need?')) {
+                        deleteNeed(n.id);
+                      }
+                    }}
+                    className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                 </div>
-                <button
-                  onClick={() => {
-                    if (confirm(isRtl ? 'حذف هذا النداء نهائياً؟' : 'Delete this need?')) {
-                      deleteNeed(n.id);
-                    }
-                  }}
-                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      {/* Modals */}
+      {/* ==================================================== */}
+      {/* 4. MAINTENANCE TAB */}
+      {/* ==================================================== */}
+      {activeTab === 'maintenance' && (
+        <div className="p-5 bg-white rounded-2xl border border-slate-200 space-y-3">
+          <h3 className="text-sm font-bold text-red-700 flex items-center gap-1.5">
+            <AlertTriangle className="w-4 h-4" />
+            <span>{isRtl ? 'تصفير وحذف البيانات التجريبية' : 'Wipe Dummy / Test Data'}</span>
+          </h3>
+          <p className="text-xs text-slate-600 leading-relaxed">
+            {isRtl 
+              ? 'إذا كانت هناك جمعيات أو فروع قديمة ترغب في مسحها دفعة واحدة للبدء من الصفر بقاعدة بيانات نظيفة.' 
+              : 'Purge any residual mock/dummy collections to start with a fresh database.'}
+          </p>
+          <button
+            onClick={handlePurgeAll}
+            disabled={saving}
+            className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-bold text-xs rounded-xl shadow-xs transition"
+          >
+            {saving ? (isRtl ? 'جاري المسح...' : 'Wiping...') : (isRtl ? 'مسح وتصفير كافة البيانات الآن' : 'Wipe All Data')}
+          </button>
+        </div>
+      )}
+
+      {/* MODAL: ADD ORGANIZATION */}
       {showOrgModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-900 mb-3">{isRtl ? 'إضافة منظمة جديدة' : 'Add Org'}</h3>
+            <h3 className="text-sm font-black text-slate-900 mb-3">{isRtl ? 'إضافة جمعية جديدة' : 'Add Charity Organization'}</h3>
             <form onSubmit={handleCreateOrg} className="space-y-3">
-              <input
-                required
-                type="text"
-                placeholder={isRtl ? 'اسم المنظمة' : 'Org Name'}
-                value={orgForm.name}
-                onChange={e => setOrgForm({ ...orgForm, name: e.target.value })}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
-              />
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">{isRtl ? 'اسم الجمعية أو المنظمة *' : 'Charity Name *'}</label>
+                <input
+                  required
+                  type="text"
+                  placeholder={isRtl ? 'مثال: جمعية الإحسان الخيرية / الهلال الأحمر' : 'e.g. Red Crescent / Ihsan Charity'}
+                  value={orgForm.name}
+                  onChange={e => setOrgForm({ ...orgForm, name: e.target.value })}
+                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs"
+                />
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setShowOrgModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">
                   {isRtl ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 rounded-xl">
-                  {isRtl ? 'حفظ' : 'Save'}
+                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 rounded-xl">
+                  {isRtl ? 'حفظ الجمعية' : 'Save Charity'}
                 </button>
               </div>
             </form>
@@ -438,88 +493,124 @@ export default function AdminPanel() {
         </div>
       )}
 
+      {/* MODAL: ADD BRANCH + CREATE LOGIN CREDENTIALS */}
       {showBranchModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-900 mb-3">{isRtl ? 'إضافة فرع جديد' : 'Add Branch'}</h3>
-            <form onSubmit={handleCreateBranch} className="space-y-3">
-              <input
-                required
-                type="text"
-                placeholder={isRtl ? 'اسم الفرع' : 'Branch Name'}
-                value={branchForm.name}
-                onChange={e => setBranchForm({ ...branchForm, name: e.target.value })}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
-              />
-              <select
-                value={branchForm.wilaya}
-                onChange={e => setBranchForm({ ...branchForm, wilaya: e.target.value })}
-                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white"
-              >
-                {ALGERIA_WILAYAS.map(w => (
-                  <option key={w.code} value={w.nameAr}>{w.code} - {w.nameAr}</option>
-                ))}
-              </select>
-              <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowBranchModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">
-                  {isRtl ? 'إلغاء' : 'Cancel'}
-                </button>
-                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 rounded-xl">
-                  {isRtl ? 'حفظ' : 'Save'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl border border-slate-200 my-auto animate-in fade-in">
+            <h3 className="text-sm font-black text-slate-900 mb-3">
+              {isRtl ? 'إضافة فرع وتعيين بيانات الدخول' : 'Add Branch & Issue Login'}
+            </h3>
 
-      {showUserModal && (
-        <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-slate-200">
-            <h3 className="text-sm font-bold text-slate-900 mb-3">{isRtl ? 'إضافة حساب منسق جديد' : 'Add Staff User'}</h3>
-            <form onSubmit={handleCreateUser} className="space-y-3">
+            <form onSubmit={handleCreateBranch} className="space-y-3">
+              {/* Select Parent Org */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">{isRtl ? 'الاسم الكامل' : 'Full Name'}</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">{isRtl ? 'الجمعية التابع لها *' : 'Parent Charity *'}</label>
+                <select
+                  required
+                  value={branchForm.orgId}
+                  onChange={e => setBranchForm({ ...branchForm, orgId: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white font-medium"
+                >
+                  {organizations.map(o => (
+                    <option key={o.id} value={o.id}>{o.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Branch Name */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">{isRtl ? 'اسم الفرع *' : 'Branch Name *'}</label>
                 <input
                   required
                   type="text"
-                  placeholder="محمد بن علي"
-                  value={userForm.displayName}
-                  onChange={e => setUserForm({ ...userForm, displayName: e.target.value })}
+                  placeholder={isRtl ? 'مثال: فرع ولاية البليدة' : 'e.g. Blida Branch'}
+                  value={branchForm.name}
+                  onChange={e => setBranchForm({ ...branchForm, name: e.target.value })}
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
                 />
               </div>
 
+              {/* Wilaya & Phone */}
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">{isRtl ? 'الولاية *' : 'Wilaya *'}</label>
+                  <select
+                    value={branchForm.wilaya}
+                    onChange={e => setBranchForm({ ...branchForm, wilaya: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white"
+                  >
+                    {ALGERIA_WILAYAS.map(w => (
+                      <option key={w.code} value={w.nameAr}>{w.nameAr}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-700 mb-1">{isRtl ? 'رقم الهاتف' : 'Phone'}</label>
+                  <input
+                    type="tel"
+                    placeholder="0550 12 34 56"
+                    value={branchForm.phone}
+                    onChange={e => setBranchForm({ ...branchForm, phone: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs dir-ltr"
+                  />
+                </div>
+              </div>
+
+              {/* Address */}
               <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">{isRtl ? 'البريد الإلكتروني أو اسم المستخدم' : 'Email / Username'}</label>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">{isRtl ? 'العنوان / المقر' : 'Address'}</label>
                 <input
-                  required
                   type="text"
-                  placeholder="blida@hopelink.dz"
-                  value={userForm.email}
-                  onChange={e => setUserForm({ ...userForm, email: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs dir-ltr"
+                  placeholder={isRtl ? 'مثال: وسط مدينة البليدة' : 'e.g. City center'}
+                  value={branchForm.address}
+                  onChange={e => setBranchForm({ ...branchForm, address: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
                 />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-semibold text-slate-600 mb-1">{isRtl ? 'كلمة المرور' : 'Password'}</label>
-                <input
-                  required
-                  type="text"
-                  placeholder="password123"
-                  value={userForm.password}
-                  onChange={e => setUserForm({ ...userForm, password: e.target.value })}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs dir-ltr font-mono"
-                />
+              {/* LOGIN CREDENTIALS SECTION */}
+              <div className="p-3.5 bg-purple-50/70 rounded-2xl border border-purple-200 space-y-2.5">
+                <div className="flex items-center gap-1.5 font-bold text-xs text-purple-900">
+                  <KeyRound className="w-3.5 h-3.5" />
+                  <span>{isRtl ? 'بيانات الدخول للفرع (لتسليمها للمنسق):' : 'Branch Login Credentials:'}</span>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-purple-950 mb-0.5">
+                    {isRtl ? 'اسم المستخدم للدخول *' : 'Login Username *'}
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder={isRtl ? 'مثال: blida' : 'e.g. blida'}
+                    value={branchForm.username}
+                    onChange={e => setBranchForm({ ...branchForm, username: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-xl border border-purple-300 text-xs bg-white dir-ltr font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-purple-950 mb-0.5">
+                    {isRtl ? 'كلمة المرور للدخول *' : 'Login Password *'}
+                  </label>
+                  <input
+                    required
+                    type="text"
+                    placeholder={isRtl ? 'مثال: blida123456' : 'e.g. blida123456'}
+                    value={branchForm.password}
+                    onChange={e => setBranchForm({ ...branchForm, password: e.target.value })}
+                    className="w-full px-3 py-1.5 rounded-xl border border-purple-300 text-xs bg-white dir-ltr font-mono"
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
-                <button type="button" onClick={() => setShowUserModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">
+                <button type="button" onClick={() => setShowBranchModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">
                   {isRtl ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 rounded-xl">
-                  {isRtl ? 'إنشاء الحساب' : 'Create Account'}
+                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 rounded-xl">
+                  {saving ? (isRtl ? 'جاري الإنشاء...' : 'Creating...') : (isRtl ? 'إنشاء الفرع وحساب الدخول' : 'Create Branch')}
                 </button>
               </div>
             </form>
