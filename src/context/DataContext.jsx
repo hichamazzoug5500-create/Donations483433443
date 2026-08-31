@@ -5,23 +5,16 @@ import {
   updateDoc, 
   deleteDoc, 
   doc, 
-  query, 
   onSnapshot, 
   serverTimestamp,
-  where,
   getDocs,
-  setDoc,
-  orderBy
+  setDoc
 } from 'firebase/firestore';
-import { db, isFirebaseConfigured } from '../firebase/config';
+import { db } from '../firebase/config';
 import { useAuth } from './AuthContext';
 import { 
   DEMO_ORGANIZATIONS, 
-  DEMO_BRANCHES, 
-  DEMO_USERS, 
-  DEMO_NEEDS, 
-  DEMO_DISPATCHES, 
-  DEMO_NOTIFICATIONS 
+  DEMO_BRANCHES 
 } from '../data/mockReliefData';
 
 const DataContext = createContext(null);
@@ -35,51 +28,45 @@ export const useData = () => {
 };
 
 export const DataProvider = ({ children }) => {
-  const { userProfile, currentUser, isDemoMode, isSuperAdmin } = useAuth();
+  const { userProfile, currentUser, isSuperAdmin } = useAuth();
   
-  // Primary Entity States
   const [organizations, setOrganizations] = useState([]);
   const [branches, setBranches] = useState([]);
   const [needs, setNeeds] = useState([]);
   const [dispatches, setDispatches] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [systemUsers, setSystemUsers] = useState([]);
-  
   const [loading, setLoading] = useState(true);
 
-  // Load / Sync real-time or demo data
-  useEffect(() => {
-    if (!isFirebaseConfigured || isDemoMode) {
-      // 1. Organizations
-      const savedOrgs = localStorage.getItem('relief_demo_orgs');
-      setOrganizations(savedOrgs ? JSON.parse(savedOrgs) : DEMO_ORGANIZATIONS);
+  // Auto-seed initial basic org & branches in Firestore if completely empty
+  const autoSeedInitialData = async () => {
+    try {
+      const orgsSnap = await getDocs(collection(db, 'organizations'));
+      if (orgsSnap.empty) {
+        for (const org of DEMO_ORGANIZATIONS) {
+          await setDoc(doc(db, 'organizations', org.id), org);
+        }
+      }
 
-      // 2. Branches
-      const savedBranches = localStorage.getItem('relief_demo_branches');
-      setBranches(savedBranches ? JSON.parse(savedBranches) : DEMO_BRANCHES);
-
-      // 3. Needs
-      const savedNeeds = localStorage.getItem('relief_demo_needs');
-      setNeeds(savedNeeds ? JSON.parse(savedNeeds) : DEMO_NEEDS);
-
-      // 4. Dispatches
-      const savedDispatches = localStorage.getItem('relief_demo_dispatches');
-      setDispatches(savedDispatches ? JSON.parse(savedDispatches) : DEMO_DISPATCHES);
-
-      // 5. System Users
-      const savedUsers = localStorage.getItem('relief_demo_users_list');
-      setSystemUsers(savedUsers ? JSON.parse(savedUsers) : Object.values(DEMO_USERS));
-
-      // 6. User Notifications
-      const currentUid = userProfile?.uid || 'user-blida-cra';
-      const userNotifs = DEMO_NOTIFICATIONS[currentUid] || [];
-      const savedNotifs = localStorage.getItem('relief_demo_notifs_' + currentUid);
-      setNotifications(savedNotifs ? JSON.parse(savedNotifs) : userNotifs);
-
-      setLoading(false);
-      return;
+      const branchesSnap = await getDocs(collection(db, 'branches'));
+      if (branchesSnap.empty) {
+        for (const branch of DEMO_BRANCHES) {
+          await setDoc(doc(db, 'branches', branch.id), branch);
+        }
+      }
+    } catch (err) {
+      console.warn("Auto-seed notice (requires auth):", err.message);
     }
+  };
 
+  useEffect(() => {
+    if (currentUser?.uid) {
+      autoSeedInitialData();
+    }
+  }, [currentUser?.uid]);
+
+  // Firestore Real-Time Listeners
+  useEffect(() => {
     setLoading(true);
     const unsubs = [];
 
@@ -96,7 +83,7 @@ export const DataProvider = ({ children }) => {
         setBranches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }, (err) => console.warn("Branches listener notice:", err.message)));
 
-      // 3. Needs Listener
+      // 3. Needs Listener (Global live feed)
       const needsRef = collection(db, 'needs');
       unsubs.push(onSnapshot(needsRef, (snap) => {
         const docsData = snap.docs.map(d => {
@@ -120,15 +107,13 @@ export const DataProvider = ({ children }) => {
         setDispatches(docsData);
       }, (err) => console.warn("Dispatches listener notice:", err.message)));
 
-      // 5. System Users (if Super Admin)
-      if (isSuperAdmin) {
-        const usersRef = collection(db, 'users');
-        unsubs.push(onSnapshot(usersRef, (snap) => {
-          setSystemUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
-        }, (err) => console.warn("Users listener notice:", err.message)));
-      }
+      // 5. System Users (for Admin)
+      const usersRef = collection(db, 'users');
+      unsubs.push(onSnapshot(usersRef, (snap) => {
+        setSystemUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+      }, (err) => console.warn("Users listener notice:", err.message)));
 
-      // 6. User Notifications Subcollection
+      // 6. User In-App Notifications
       if (currentUser?.uid) {
         const notifsRef = collection(db, 'notifications', currentUser.uid, 'items');
         unsubs.push(onSnapshot(notifsRef, (snap) => {
@@ -145,21 +130,16 @@ export const DataProvider = ({ children }) => {
     }
 
     return () => unsubs.forEach(unsub => unsub && unsub());
-  }, [isDemoMode, currentUser?.uid, isSuperAdmin]);
-
-  // Storage helper for Demo Mode
-  const persistDemo = (key, data) => {
-    localStorage.setItem(key, JSON.stringify(data));
-  };
+  }, [currentUser?.uid]);
 
   // ==========================================
-  // 1. NEEDS MANAGEMENT (Disaster Relief Needs)
+  // 1. NEEDS CRUD (Disaster Relief Needs)
   // ==========================================
   const createNeed = async (needData) => {
     const orgId = userProfile?.orgId || 'org-crescent-dz';
     const orgName = userProfile?.orgName || 'الهلال الأحمر الجزائري';
     const branchId = userProfile?.branchId || 'branch-cra-blida';
-    const branchName = userProfile?.branchName || 'فرع الطوارئ';
+    const branchName = userProfile?.branchName || 'فرع ولاية البليدة';
 
     const payload = {
       orgId,
@@ -192,67 +172,28 @@ export const DataProvider = ({ children }) => {
           unit: ''
         }
       ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    if (!isFirebaseConfigured || isDemoMode) {
-      const newNeed = { id: 'need-' + Date.now(), ...payload };
-      const updated = [newNeed, ...needs];
-      setNeeds(updated);
-      persistDemo('relief_demo_needs', updated);
-
-      // Trigger notification for other branches
-      sendNotification('broadcast', {
-        title: `🆘 نداء مساعدة جديد: ${payload.title}`,
-        body: `فرع ${branchName} أعلن عن احتياج مساعدة في ${payload.location.wilaya}.`,
-        relatedNeedId: newNeed.id
-      });
-
-      return newNeed.id;
-    }
-
-    const docRef = await addDoc(collection(db, 'needs'), {
-      ...payload,
+      createdBy: currentUser?.uid || 'anonymous',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    };
 
-    const optimistic = { id: docRef.id, ...payload };
-    setNeeds(prev => [optimistic, ...prev.filter(n => n.id !== docRef.id)]);
+    const docRef = await addDoc(collection(db, 'needs'), payload);
     return docRef.id;
   };
 
   const updateNeed = async (needId, fields) => {
-    const updatedPayload = { ...fields, updatedAt: new Date().toISOString() };
-    setNeeds(prev => prev.map(n => n.id === needId ? { ...n, ...updatedPayload } : n));
-
-    if (!isFirebaseConfigured || isDemoMode) {
-      const updated = needs.map(n => n.id === needId ? { ...n, ...updatedPayload } : n);
-      persistDemo('relief_demo_needs', updated);
-      return;
-    }
-
     const reqRef = doc(db, 'needs', needId);
     await updateDoc(reqRef, { ...fields, updatedAt: serverTimestamp() });
   };
 
   const deleteNeed = async (needId) => {
-    setNeeds(prev => prev.filter(n => n.id !== needId));
-
-    if (!isFirebaseConfigured || isDemoMode) {
-      const updated = needs.filter(n => n.id !== needId);
-      persistDemo('relief_demo_needs', updated);
-      return;
-    }
-
     await deleteDoc(doc(db, 'needs', needId));
   };
 
-  // Direct commitment / pledging by another branch
+  // Direct commitment / aid pledge
   const commitToNeed = async (needId, pledgeData) => {
     const targetNeed = needs.find(n => n.id === needId);
-    const donorBranchName = pledgeData.donorName || userProfile?.branchName || userProfile?.orgName;
+    const donorBranchName = userProfile?.branchName || userProfile?.orgName || 'فرع متطوع';
     const donorBranchId = userProfile?.branchId || 'branch-cra-algiers';
 
     const updates = {
@@ -261,16 +202,16 @@ export const DataProvider = ({ children }) => {
       committedDonorName: donorBranchName,
       committedDonorPhone: pledgeData.donorPhone || userProfile?.phone || '',
       commitmentType: pledgeData.commitmentType || 'full',
-      pledgedQuantity: pledgeData.pledgedQuantity || '',
+      pledgedQuantity: pledgeData.providedQuantity || pledgeData.pledgedQuantity || '',
       remainingQuantity: pledgeData.commitmentType === 'partial' ? pledgeData.remainingQuantity : null,
-      deliveryDate: pledgeData.deliveryDate || '',
-      donorNotes: pledgeData.donorNotes || '',
-      updatedAt: new Date().toISOString()
+      deliveryDate: pledgeData.estimatedArrival || '',
+      donorNotes: pledgeData.notes || '',
+      updatedAt: serverTimestamp()
     };
 
     await updateNeed(needId, updates);
 
-    // Create a dispatch record to keep tracking in sync
+    // Record an aid dispatch tracking document
     if (targetNeed) {
       await createDispatch({
         toOrgId: targetNeed.orgId,
@@ -283,20 +224,20 @@ export const DataProvider = ({ children }) => {
             needItemId: targetNeed.items && targetNeed.items[0]?.itemId ? targetNeed.items[0].itemId : 'item_1',
             category: targetNeed.category || 'food',
             description: targetNeed.needDescription || targetNeed.title,
-            quantity: pledgeData.pledgedQuantity || targetNeed.quantity || '1',
+            quantity: pledgeData.providedQuantity || targetNeed.quantity || '1',
             unit: ''
           }
         ],
-        notes: pledgeData.donorNotes || '',
+        notes: pledgeData.notes || '',
         transportDetails: {
-          estimatedArrival: pledgeData.deliveryDate || ''
+          estimatedArrival: pledgeData.estimatedArrival || ''
         }
       });
     }
   };
 
   // ==========================================
-  // 2. DISPATCHES MANAGEMENT (Inter-Branch Aid)
+  // 2. DISPATCHES MANAGEMENT
   // ==========================================
   const createDispatch = async (dispatchData) => {
     const fromOrgName = userProfile?.orgName || 'الهلال الأحمر الجزائري';
@@ -309,9 +250,9 @@ export const DataProvider = ({ children }) => {
       fromBranchName,
       toOrgId: dispatchData.toOrgId || userProfile?.orgId || 'org-crescent-dz',
       toOrgName: dispatchData.toOrgName || fromOrgName,
-      toBranchId: dispatchData.toBranchId,
-      toBranchName: dispatchData.toBranchName || 'الفرع المستقبل',
-      needId: dispatchData.needId,
+      toBranchId: dispatchData.toBranchId || 'branch-dest',
+      toBranchName: dispatchData.toBranchName || 'الفرع المستلم',
+      needId: dispatchData.needId || '',
       status: 'pledged',
       items: dispatchData.items || [],
       transportDetails: {
@@ -320,109 +261,51 @@ export const DataProvider = ({ children }) => {
         driverPhone: dispatchData.transportDetails?.driverPhone || '',
         estimatedArrival: dispatchData.transportDetails?.estimatedArrival || ''
       },
-      dispatchedBy: currentUser?.uid || userProfile?.uid || 'user-sender',
+      dispatchedBy: currentUser?.uid || 'user-sender',
       notes: dispatchData.notes || '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-
-    if (!isFirebaseConfigured || isDemoMode) {
-      const newDispatch = { id: 'disp-' + Date.now(), ...payload };
-      const updated = [newDispatch, ...dispatches];
-      setDispatches(updated);
-      persistDemo('relief_demo_dispatches', updated);
-
-      // Create notification for receiving branch
-      sendNotification(dispatchData.toBranchId, {
-        type: 'dispatch_pledged',
-        title: `📦 التزام بإرسال معونة من ${fromBranchName}`,
-        body: `تم تسجيل التزام بإرسال مساعدات إلى فرعكم.`,
-        relatedNeedId: dispatchData.needId,
-        relatedDispatchId: newDispatch.id
-      });
-
-      return newDispatch.id;
-    }
-
-    const docRef = await addDoc(collection(db, 'dispatches'), {
-      ...payload,
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp()
-    });
+    };
 
-    const optimistic = { id: docRef.id, ...payload };
-    setDispatches(prev => [optimistic, ...prev.filter(d => d.id !== docRef.id)]);
-
+    const docRef = await addDoc(collection(db, 'dispatches'), payload);
     return docRef.id;
   };
 
   const updateDispatchStatus = async (dispatchId, newStatus, extraData = {}) => {
-    const updates = { 
+    const dispRef = doc(db, 'dispatches', dispatchId);
+    await updateDoc(dispRef, { 
       status: newStatus, 
       ...extraData, 
-      updatedAt: new Date().toISOString() 
-    };
-
-    setDispatches(prev => prev.map(d => d.id === dispatchId ? { ...d, ...updates } : d));
-
-    if (!isFirebaseConfigured || isDemoMode) {
-      const updated = dispatches.map(d => d.id === dispatchId ? { ...d, ...updates } : d);
-      persistDemo('relief_demo_dispatches', updated);
-      return;
-    }
-
-    const dispRef = doc(db, 'dispatches', dispatchId);
-    await updateDoc(dispRef, { ...updates, updatedAt: serverTimestamp() });
+      updatedAt: serverTimestamp() 
+    });
   };
 
   const confirmDispatchDelivery = async (dispatchId) => {
     return updateDispatchStatus(dispatchId, 'confirmed', {
-      confirmedBy: currentUser?.uid || userProfile?.uid,
+      confirmedBy: currentUser?.uid,
       confirmedAt: new Date().toISOString()
     });
   };
 
   // ==========================================
-  // 3. NOTIFICATIONS SYSTEM
+  // 3. IN-APP NOTIFICATIONS
   // ==========================================
-  const sendNotification = async (targetUidOrBranch, notifPayload) => {
+  const sendNotification = async (targetUid, notifPayload) => {
+    if (!targetUid) return;
     const notifItem = {
-      id: 'notif-' + Date.now() + '-' + Math.random().toString(36).substr(2, 4),
       type: notifPayload.type || 'info',
       title: notifPayload.title,
       body: notifPayload.body,
       relatedNeedId: notifPayload.relatedNeedId || null,
       relatedDispatchId: notifPayload.relatedDispatchId || null,
       isRead: false,
-      createdAt: new Date().toISOString()
+      createdAt: serverTimestamp()
     };
 
-    if (!isFirebaseConfigured || isDemoMode) {
-      const currentUid = userProfile?.uid || 'user-blida-cra';
-      const updated = [notifItem, ...notifications];
-      setNotifications(updated);
-      persistDemo('relief_demo_notifs_' + currentUid, updated);
-      return notifItem.id;
-    }
-
-    if (currentUser?.uid) {
-      await addDoc(collection(db, 'notifications', currentUser.uid, 'items'), {
-        ...notifItem,
-        createdAt: serverTimestamp()
-      });
-    }
+    await addDoc(collection(db, 'notifications', targetUid, 'items'), notifItem);
   };
 
   const markNotificationRead = async (notifId) => {
-    setNotifications(prev => prev.map(n => n.id === notifId ? { ...n, isRead: true } : n));
-
-    if (!isFirebaseConfigured || isDemoMode) {
-      const currentUid = userProfile?.uid || 'user-blida-cra';
-      const updated = notifications.map(n => n.id === notifId ? { ...n, isRead: true } : n);
-      persistDemo('relief_demo_notifs_' + currentUid, updated);
-      return;
-    }
-
     if (currentUser?.uid) {
       const notifRef = doc(db, 'notifications', currentUser.uid, 'items', notifId);
       await updateDoc(notifRef, { isRead: true });
@@ -430,15 +313,6 @@ export const DataProvider = ({ children }) => {
   };
 
   const markAllNotificationsRead = async () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-
-    if (!isFirebaseConfigured || isDemoMode) {
-      const currentUid = userProfile?.uid || 'user-blida-cra';
-      const updated = notifications.map(n => ({ ...n, isRead: true }));
-      persistDemo('relief_demo_notifs_' + currentUid, updated);
-      return;
-    }
-
     notifications.forEach(async (n) => {
       if (!n.isRead && currentUser?.uid) {
         try {
@@ -449,7 +323,7 @@ export const DataProvider = ({ children }) => {
   };
 
   // ==========================================
-  // 4. ADMIN ENTITY CONTROLS (Super Admin Only)
+  // 4. ADMIN CONTROLS
   // ==========================================
   const createOrganization = async (orgData) => {
     const payload = {
@@ -457,28 +331,17 @@ export const DataProvider = ({ children }) => {
       nameEn: orgData.nameEn || '',
       type: orgData.type || 'ngo',
       allowCrossOrg: Boolean(orgData.allowCrossOrg),
-      createdAt: new Date().toISOString()
+      createdAt: serverTimestamp()
     };
 
-    if (!isFirebaseConfigured || isDemoMode) {
-      const newOrg = { id: 'org-' + Date.now(), ...payload };
-      const updated = [...organizations, newOrg];
-      setOrganizations(updated);
-      persistDemo('relief_demo_orgs', updated);
-      return newOrg.id;
-    }
-
-    const docRef = await addDoc(collection(db, 'organizations'), {
-      ...payload,
-      createdAt: serverTimestamp()
-    });
+    const docRef = await addDoc(collection(db, 'organizations'), payload);
     return docRef.id;
   };
 
   const createBranch = async (branchData) => {
     const payload = {
       orgId: branchData.orgId,
-      orgName: branchData.orgName || 'منظمة إغاثية',
+      orgName: branchData.orgName || 'الهلال الأحمر الجزائري',
       name: branchData.name,
       wilaya: branchData.wilaya,
       address: branchData.address || '',
@@ -489,60 +352,14 @@ export const DataProvider = ({ children }) => {
       phone: branchData.phone || '',
       status: branchData.status || 'active',
       capabilities: branchData.capabilities || ['volunteers'],
-      createdAt: new Date().toISOString()
+      createdAt: serverTimestamp()
     };
 
-    if (!isFirebaseConfigured || isDemoMode) {
-      const newBranch = { id: 'branch-' + Date.now(), ...payload };
-      const updated = [...branches, newBranch];
-      setBranches(updated);
-      persistDemo('relief_demo_branches', updated);
-      return newBranch.id;
-    }
-
-    const docRef = await addDoc(collection(db, 'branches'), {
-      ...payload,
-      createdAt: serverTimestamp()
-    });
-    return docRef.id;
-  };
-
-  const createAdminUser = async (userData) => {
-    const payload = {
-      email: userData.email.toLowerCase().trim(),
-      displayName: userData.displayName,
-      phone: userData.phone || '',
-      orgId: userData.orgId,
-      orgName: userData.orgName || '',
-      branchId: userData.branchId,
-      branchName: userData.branchName || '',
-      role: userData.role || 'branch_member',
-      isProfileComplete: true,
-      createdAt: new Date().toISOString()
-    };
-
-    if (!isFirebaseConfigured || isDemoMode) {
-      const newUser = { uid: 'user-' + Date.now(), ...payload };
-      const updated = [...systemUsers, newUser];
-      setSystemUsers(updated);
-      persistDemo('relief_demo_users_list', updated);
-      return newUser.uid;
-    }
-
-    const docRef = await addDoc(collection(db, 'users'), {
-      ...payload,
-      createdAt: serverTimestamp()
-    });
+    const docRef = await addDoc(collection(db, 'branches'), payload);
     return docRef.id;
   };
 
   const deleteAdminUser = async (userId) => {
-    setSystemUsers(prev => prev.filter(u => u.uid !== userId));
-    if (!isFirebaseConfigured || isDemoMode) {
-      const updated = systemUsers.filter(u => u.uid !== userId);
-      persistDemo('relief_demo_users_list', updated);
-      return;
-    }
     await deleteDoc(doc(db, 'users', userId));
   };
 
@@ -555,27 +372,22 @@ export const DataProvider = ({ children }) => {
     systemUsers,
     loading,
 
-    // Needs actions
     createNeed,
     updateNeed,
     deleteNeed,
     commitToNeed,
 
-    // Dispatch actions
     createDispatch,
     updateDispatchStatus,
     confirmDispatchDelivery,
 
-    // Notifications actions
     sendNotification,
     markNotificationRead,
     markAllNotificationsRead,
     unreadNotifsCount: notifications.filter(n => !n.isRead).length,
 
-    // Super Admin actions
     createOrganization,
     createBranch,
-    createAdminUser,
     deleteAdminUser
   };
 

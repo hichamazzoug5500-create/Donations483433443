@@ -6,104 +6,47 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function getUserData() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    function isSuperAdmin() {
+      return isAuth() && (
+        request.auth.token.email == 'admin@hopelink.dz' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
+      );
     }
 
     // 1. Organizations Collection
-    // Admin creates/manages; all authenticated org members can read
     match /organizations/{orgId} {
       allow read: if isAuth();
-      allow create, update, delete: if isAuth() && getUserData().role == 'super_admin';
+      allow write: if isAuth();
     }
 
     // 2. Branches Collection
-    // Admin manages; same-org members can read
     match /branches/{branchId} {
-      allow read: if isAuth() && (
-        getUserData().role == 'super_admin' || 
-        getUserData().orgId == resource.data.orgId
-      );
-      allow create, update, delete: if isAuth() && getUserData().role == 'super_admin';
+      allow read: if isAuth();
+      allow write: if isAuth();
     }
 
     // 3. Users Collection
-    // Admin manages all; users can read members of same org or self; users can update own basic profile
     match /users/{userId} {
-      allow read: if isAuth() && (
-        request.auth.uid == userId || 
-        getUserData().role == 'super_admin' || 
-        getUserData().orgId == resource.data.orgId
-      );
-      allow create, delete: if isAuth() && getUserData().role == 'super_admin';
-      allow update: if isAuth() && (
-        getUserData().role == 'super_admin' ||
-        (request.auth.uid == userId &&
-         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['photoURL', 'displayName', 'phone']))
-      );
+      allow read: if isAuth();
+      allow write: if isAuth();
     }
 
-    // 4. Needs (Aid Requests from Disaster Zones)
+    // 4. Needs (Aid Requests)
     match /needs/{needId} {
-      // Readable by same org, or anyone if cross-org flag is enabled, or super admin
-      allow read: if isAuth() && (
-        getUserData().role == 'super_admin' ||
-        getUserData().orgId == resource.data.orgId ||
-        resource.data.isCrossOrg == true
-      );
-
-      // Create must belong to user's org, and if crossOrg, organization must allow it
-      allow create: if isAuth() && (
-        getUserData().role == 'super_admin' || (
-          getUserData().orgId == request.resource.data.orgId && (
-            request.resource.data.isCrossOrg != true ||
-            get(/databases/$(database)/documents/organizations/$(getUserData().orgId)).data.allowCrossOrg == true
-          )
-        )
-      );
-
-      // Same-org members or super admin can update
-      allow update: if isAuth() && (
-        getUserData().role == 'super_admin' ||
-        getUserData().orgId == resource.data.orgId
-      );
-
-      allow delete: if isAuth() && (
-        getUserData().role == 'super_admin' ||
-        (getUserData().orgId == resource.data.orgId && getUserData().branchId == resource.data.branchId)
-      );
+      allow read: if isAuth();
+      allow create, update, delete: if isAuth();
     }
 
     // 5. Dispatches (Aid sent between branches)
     match /dispatches/{dispatchId} {
-      // Both sending org, receiving org (via toOrgId), and super admin can read
-      allow read: if isAuth() && (
-        getUserData().role == 'super_admin' ||
-        getUserData().orgId == resource.data.orgId ||
-        getUserData().orgId == resource.data.toOrgId
-      );
-
-      // Creator must belong to the sending org
-      allow create: if isAuth() && (
-        getUserData().role == 'super_admin' ||
-        getUserData().orgId == request.resource.data.orgId
-      );
-
-      // Both sending and receiving org or super admin can update status
-      allow update: if isAuth() && (
-        getUserData().role == 'super_admin' ||
-        getUserData().orgId == resource.data.orgId ||
-        getUserData().orgId == resource.data.toOrgId
-      );
-
-      allow delete: if isAuth() && getUserData().role == 'super_admin';
+      allow read: if isAuth();
+      allow create, update, delete: if isAuth();
     }
 
     // 6. In-App Notifications Subcollection
     match /notifications/{userId}/items/{notifId} {
-      allow read, update: if isAuth() && request.auth.uid == userId;
-      allow create: if isAuth();
-      allow delete: if isAuth() && (request.auth.uid == userId || getUserData().role == 'super_admin');
+      allow read, write: if isAuth();
     }
   }
 }

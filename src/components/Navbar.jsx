@@ -2,22 +2,20 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { 
   LogOut, 
-  Globe, 
   Map as MapIcon, 
   ShieldCheck, 
   Building2, 
   PlusCircle,
-  ArrowLeftRight,
-  User
+  User,
+  ChevronDown
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import NotificationBell from './NotificationBell';
 import PostNeedModal from './PostNeedModal';
-import { DEMO_USERS } from '../data/mockReliefData';
 
 export default function Navbar() {
-  const { currentUser, userProfile, logout, isSuperAdmin, loginDemoAccount } = useAuth();
+  const { currentUser, userProfile, logout, isSuperAdmin } = useAuth();
   const { lang, toggleLanguage, isRtl } = useLanguage();
   const navigate = useNavigate();
   const location = useLocation();
@@ -30,6 +28,7 @@ export default function Navbar() {
   const handleLogout = async () => {
     try {
       await logout();
+      setShowUserDropdown(false);
       navigate('/login');
     } catch (err) {
       console.error("Logout error:", err);
@@ -42,7 +41,7 @@ export default function Navbar() {
         <div className="max-w-4xl mx-auto px-3 sm:px-6">
           <div className="flex justify-between items-center h-14">
             
-            {/* Brand Logo & Direct Links */}
+            {/* Brand Logo & Links */}
             <div className="flex items-center gap-3 sm:gap-6">
               <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
                 <div className="w-8 h-8 rounded-xl bg-emerald-800 flex items-center justify-center text-white font-extrabold text-xs shadow-2xs">
@@ -58,7 +57,7 @@ export default function Navbar() {
                 </div>
               </Link>
 
-              {/* Desktop Nav Links */}
+              {/* Desktop Direct Links */}
               {currentUser && (
                 <nav className="hidden md:flex items-center gap-1 rtl:pr-3 rtl:border-r ltr:pl-3 ltr:border-l border-slate-200">
                   <Link
@@ -102,7 +101,7 @@ export default function Navbar() {
             {/* Right Controls */}
             <div className="flex items-center gap-1.5 sm:gap-2">
               
-              {/* Notification Bell */}
+              {/* In-App Alerts Bell */}
               {currentUser && (
                 <NotificationBell onSelectNeed={(id) => navigate(`/dashboard`)} />
               )}
@@ -115,62 +114,55 @@ export default function Navbar() {
                 {lang === 'ar' ? 'EN' : 'عربي'}
               </button>
 
-              {/* User Avatar & Menu */}
+              {/* User Profile Avatar & Dropdown */}
               {currentUser ? (
                 <div className="relative">
                   <button
                     onClick={() => setShowUserDropdown(!showUserDropdown)}
-                    className="flex items-center gap-1.5 p-1 rounded-xl hover:bg-slate-50 transition border border-slate-200"
+                    className="flex items-center gap-1.5 p-1 pl-2 rtl:pl-1 rtl:pr-2 rounded-xl hover:bg-slate-50 transition border border-slate-200"
                   >
-                    <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold text-xs">
+                    <div className="w-7 h-7 rounded-lg bg-emerald-800 text-white flex items-center justify-center font-bold text-xs">
                       {userProfile?.displayName ? userProfile.displayName[0].toUpperCase() : 'U'}
                     </div>
-                    <span className="text-xs font-bold text-slate-800 hidden sm:inline max-w-[100px] truncate px-1">
+                    <span className="text-xs font-bold text-slate-800 hidden sm:inline max-w-[100px] truncate">
                       {userProfile?.displayName || userProfile?.branchName}
                     </span>
+                    <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
                   </button>
 
                   {/* Dropdown Menu */}
                   {showUserDropdown && (
-                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-50 animate-in fade-in">
-                      <div className="px-2 py-1.5 mb-2 border-b border-slate-100">
-                        <p className="text-xs font-bold text-slate-900">{userProfile?.displayName}</p>
-                        <p className="text-[10px] text-emerald-800 font-bold">{userProfile?.branchName}</p>
+                    <div className="absolute left-0 sm:left-auto sm:right-0 mt-2 w-56 bg-white rounded-2xl shadow-xl border border-slate-200 p-2.5 z-50 animate-in fade-in">
+                      <div className="px-2 py-2 mb-2 border-b border-slate-100">
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs font-bold text-slate-900 truncate">{userProfile?.displayName}</p>
+                          <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded ${
+                            isSuperAdmin ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800'
+                          }`}>
+                            {isSuperAdmin ? 'Admin' : 'Branch'}
+                          </span>
+                        </div>
+                        <p className="text-[11px] text-slate-500 truncate">{userProfile?.branchName || userProfile?.email}</p>
                       </div>
 
-                      <p className="text-[10px] font-bold text-slate-400 px-2 mb-1 uppercase tracking-wider">
-                        {isRtl ? 'تبديل الحساب التجريبي:' : 'Switch Branch:'}
-                      </p>
-
-                      <div className="space-y-0.5">
-                        {Object.entries(DEMO_USERS).map(([emailKey, u]) => (
-                          <button
-                            key={emailKey}
-                            onClick={() => {
-                              loginDemoAccount(emailKey);
-                              setShowUserDropdown(false);
-                            }}
-                            className={`w-full text-right rtl:text-right ltr:text-left p-1.5 rounded-lg text-xs transition flex flex-col ${
-                              userProfile?.email === u.email 
-                                ? 'bg-emerald-50 font-bold text-emerald-900'
-                                : 'hover:bg-slate-50 text-slate-700'
-                            }`}
-                          >
-                            <span className="font-semibold">{u.displayName}</span>
-                            <span className="text-[10px] text-slate-400">{u.branchName}</span>
-                          </button>
-                        ))}
-                      </div>
-
-                      <div className="pt-2 mt-2 border-t border-slate-100">
-                        <button
-                          onClick={handleLogout}
-                          className="w-full p-2 text-red-600 hover:bg-red-50 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition"
+                      {isSuperAdmin && (
+                        <Link
+                          to="/admin"
+                          onClick={() => setShowUserDropdown(false)}
+                          className="w-full text-right rtl:text-right ltr:text-left px-2 py-2 text-xs font-bold text-purple-800 hover:bg-purple-50 rounded-xl flex items-center gap-2 transition"
                         >
-                          <LogOut className="w-3.5 h-3.5" />
-                          <span>{isRtl ? 'تسجيل الخروج' : 'Log Out'}</span>
-                        </button>
-                      </div>
+                          <ShieldCheck className="w-4 h-4" />
+                          <span>{isRtl ? 'لوحة التحكم الإدارية' : 'Admin Hub'}</span>
+                        </Link>
+                      )}
+
+                      <button
+                        onClick={handleLogout}
+                        className="w-full text-right rtl:text-right ltr:text-left px-2 py-2 text-xs font-bold text-red-600 hover:bg-red-50 rounded-xl flex items-center gap-2 transition"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        <span>{isRtl ? 'تسجيل الخروج' : 'Log Out'}</span>
+                      </button>
                     </div>
                   )}
                 </div>
@@ -203,7 +195,7 @@ export default function Navbar() {
               <span>{isRtl ? 'الرئيسية' : 'Feed'}</span>
             </Link>
 
-            {/* Elevated Center 1-Tap Post Button */}
+            {/* Elevated Center 1-Tap Emergency Post */}
             <button
               onClick={() => setShowPostModal(true)}
               className="flex flex-col items-center justify-center flex-1 py-1 text-[10px] font-bold text-emerald-800 active:scale-95 transition"

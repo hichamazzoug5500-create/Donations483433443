@@ -8,11 +8,7 @@ import {
   AlertTriangle, 
   Plus, 
   Trash2, 
-  CheckCircle, 
-  Eye, 
-  RefreshCw, 
-  Search,
-  Filter,
+  KeyRound,
   Truck,
   Activity,
   Layers
@@ -23,7 +19,7 @@ import { useLanguage } from '../context/LanguageContext';
 import { ALGERIA_WILAYAS } from '../data/algeriaWilayas';
 
 export default function AdminPanel() {
-  const { userProfile, isSuperAdmin } = useAuth();
+  const { userProfile, isSuperAdmin, createNewStaffAccount } = useAuth();
   const { 
     organizations, 
     branches, 
@@ -32,18 +28,12 @@ export default function AdminPanel() {
     systemUsers, 
     createOrganization, 
     createBranch, 
-    createAdminUser, 
     deleteAdminUser,
-    deleteNeed,
-    updateNeed,
-    updateDispatchStatus
+    deleteNeed
   } = useData();
   const { isRtl } = useLanguage();
 
-  const [activeTab, setActiveTab] = useState('overview'); // 'overview' | 'orgs' | 'branches' | 'users' | 'data'
-  const [searchTerm, setSearchTerm] = useState('');
-
-  // Modals
+  const [activeTab, setActiveTab] = useState('overview');
   const [showOrgModal, setShowOrgModal] = useState(false);
   const [showBranchModal, setShowBranchModal] = useState(false);
   const [showUserModal, setShowUserModal] = useState(false);
@@ -62,6 +52,7 @@ export default function AdminPanel() {
   });
   const [userForm, setUserForm] = useState({
     email: '',
+    password: 'password123',
     displayName: '',
     phone: '',
     role: 'branch_member',
@@ -114,7 +105,7 @@ export default function AdminPanel() {
       const selectedOrg = organizations.find(o => o.id === branchForm.orgId);
       await createBranch({
         ...branchForm,
-        orgName: selectedOrg ? selectedOrg.name : 'منظمة'
+        orgName: selectedOrg ? selectedOrg.name : 'الهلال الأحمر الجزائري'
       });
       setShowBranchModal(false);
       setBranchForm({
@@ -142,14 +133,16 @@ export default function AdminPanel() {
     try {
       const selectedOrg = organizations.find(o => o.id === userForm.orgId);
       const selectedBranch = branches.find(b => b.id === userForm.branchId);
-      await createAdminUser({
+      await createNewStaffAccount({
         ...userForm,
-        orgName: selectedOrg ? selectedOrg.name : '',
-        branchName: selectedBranch ? selectedBranch.name : ''
+        orgName: selectedOrg ? selectedOrg.name : 'الهلال الأحمر الجزائري',
+        branchName: selectedBranch ? selectedBranch.name : 'الفرع الميداني'
       });
+      alert(isRtl ? 'تم إنشاء الحساب بنجاح! يمكن للمستخدم تسجيل الدخول الآن.' : 'User account created successfully!');
       setShowUserModal(false);
       setUserForm({
         email: '',
+        password: 'password123',
         displayName: '',
         phone: '',
         role: 'branch_member',
@@ -163,41 +156,40 @@ export default function AdminPanel() {
     }
   };
 
-  const activeDisasterBranches = branches.filter(b => b.status === 'disaster_zone');
   const activeNeedsCount = needs.filter(n => n.status !== 'fulfilled' && n.status !== 'cancelled').length;
   const inTransitDispatches = dispatches.filter(d => d.status === 'in_transit' || d.status === 'dispatched').length;
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+    <div className="max-w-4xl mx-auto px-4 sm:px-6 py-6 space-y-6 animate-in fade-in">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
         <div>
-          <div className="flex items-center gap-2.5 mb-1.5">
-            <div className="p-2 rounded-xl bg-purple-700 text-white">
-              <ShieldCheck className="w-6 h-6" />
+          <div className="flex items-center gap-2 mb-1">
+            <div className="p-1.5 rounded-xl bg-purple-700 text-white">
+              <ShieldCheck className="w-5 h-5" />
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900">
-              {isRtl ? 'لوحة الإدارة والتحكم العام' : 'Central Admin Hub'}
+            <h1 className="text-xl sm:text-2xl font-black text-slate-900">
+              {isRtl ? 'لوحة الإدارة والتحكم' : 'Admin Hub'}
             </h1>
-            <span className="px-2.5 py-1 rounded-full bg-purple-100 text-purple-800 text-xs font-bold">
+            <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold">
               Super Admin
             </span>
           </div>
           <p className="text-xs text-slate-500">
             {isRtl 
-              ? 'إدارة المنظمات الخيرية، الفروع، الحسابات المعتمدة، ومراقبة تدفق المساعدات على المستوى الوطني.' 
-              : 'Manage charity organizations, branches, authorized staff, and national aid logistics.'}
+              ? 'إدارة المنظمات الخيرية، الفروع، والحسابات المعتمدة.' 
+              : 'Manage charity organizations, branches, and authorized staff.'}
           </p>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-2xl overflow-x-auto">
+        <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl overflow-x-auto">
           {[
             { id: 'overview', label: isRtl ? 'نظرة عامة' : 'Overview', icon: Activity },
-            { id: 'orgs', label: isRtl ? 'المنظمات' : 'Organizations', icon: Building2 },
+            { id: 'orgs', label: isRtl ? 'المنظمات' : 'Orgs', icon: Building2 },
             { id: 'branches', label: isRtl ? 'الفروع' : 'Branches', icon: MapPin },
             { id: 'users', label: isRtl ? 'المستخدمين' : 'Users', icon: Users },
-            { id: 'data', label: isRtl ? 'البيانات والنداءات' : 'Data & Needs', icon: Layers }
+            { id: 'data', label: isRtl ? 'النداءات' : 'Needs', icon: Layers }
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -205,13 +197,13 @@ export default function AdminPanel() {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs sm:text-sm font-bold transition-all whitespace-nowrap ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
                   isActive
-                    ? 'bg-white text-purple-800 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                    ? 'bg-white text-purple-900 shadow-2xs'
+                    : 'text-slate-600 hover:text-slate-900'
                 }`}
               >
-                <Icon className="w-4 h-4" />
+                <Icon className="w-3.5 h-3.5" />
                 <span>{tab.label}</span>
               </button>
             );
@@ -219,95 +211,67 @@ export default function AdminPanel() {
         </div>
       </div>
 
-      {/* ==================================================== */}
       {/* 1. OVERVIEW TAB */}
-      {/* ==================================================== */}
       {activeTab === 'overview' && (
-        <div className="space-y-6">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-500">{isRtl ? 'المنظمات المعتمدة' : 'Organizations'}</span>
-                <Building2 className="w-5 h-5 text-emerald-700" />
-              </div>
-              <p className="text-3xl font-black text-slate-900">{organizations.length}</p>
-            </div>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+            <span className="text-[11px] font-bold text-slate-500 block mb-1">{isRtl ? 'المنظمات' : 'Orgs'}</span>
+            <p className="text-2xl font-black text-slate-900">{organizations.length}</p>
+          </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-500">{isRtl ? 'إجمالي الفروع' : 'Total Branches'}</span>
-                <MapPin className="w-5 h-5 text-blue-600" />
-              </div>
-              <p className="text-3xl font-black text-slate-900">{branches.length}</p>
-            </div>
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+            <span className="text-[11px] font-bold text-slate-500 block mb-1">{isRtl ? 'الفروع' : 'Branches'}</span>
+            <p className="text-2xl font-black text-slate-900">{branches.length}</p>
+          </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-500">{isRtl ? 'النداءات النشطة' : 'Active Needs'}</span>
-                <AlertTriangle className="w-5 h-5 text-amber-500" />
-              </div>
-              <p className="text-3xl font-black text-slate-900">{activeNeedsCount}</p>
-            </div>
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+            <span className="text-[11px] font-bold text-slate-500 block mb-1">{isRtl ? 'النداءات الحية' : 'Active Needs'}</span>
+            <p className="text-2xl font-black text-slate-900">{activeNeedsCount}</p>
+          </div>
 
-            <div className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold text-slate-500">{isRtl ? 'قوافل في المسار' : 'Convoys in Transit'}</span>
-                <Truck className="w-5 h-5 text-purple-600" />
-              </div>
-              <p className="text-3xl font-black text-slate-900">{inTransitDispatches}</p>
-            </div>
+          <div className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs">
+            <span className="text-[11px] font-bold text-slate-500 block mb-1">{isRtl ? 'القوافل' : 'Dispatches'}</span>
+            <p className="text-2xl font-black text-slate-900">{inTransitDispatches}</p>
           </div>
         </div>
       )}
 
-      {/* ==================================================== */}
       {/* 2. ORGANIZATIONS TAB */}
-      {/* ==================================================== */}
       {activeTab === 'orgs' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900">
-              {isRtl ? 'المنظمات والجمعيات الخيرية' : 'Registered Organizations'} ({organizations.length})
+            <h2 className="text-sm font-bold text-slate-900">
+              {isRtl ? 'المنظمات والجمعيات' : 'Organizations'} ({organizations.length})
             </h2>
             <button
               onClick={() => setShowOrgModal(true)}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
             >
-              <Plus className="w-4 h-4" />
-              <span>{isRtl ? 'إضافة منظمة جديدة' : 'Add Organization'}</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isRtl ? 'إضافة منظمة' : 'Add Org'}</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {organizations.map(org => (
-              <div key={org.id} className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <div className="p-2 rounded-xl bg-emerald-50 text-emerald-800 font-bold text-xs">
-                    <Building2 className="w-5 h-5" />
-                  </div>
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold">
-                    {org.type}
-                  </span>
+              <div key={org.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-slate-900">{org.name}</h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-slate-100 text-slate-600">{org.type}</span>
                 </div>
-                <h3 className="text-base font-bold text-slate-900 mb-1">{org.name}</h3>
-                <p className="text-xs text-slate-500 mb-2">{org.nameEn || ''}</p>
-                <div className="text-xs text-slate-600 pt-2 border-t border-slate-100">
-                  <span>{org.allowCrossOrg ? '✅ تنسيق مشترك مفعّل' : '🔒 داخلي فقط'}</span>
-                </div>
+                {org.nameEn && <p className="text-xs text-slate-400">{org.nameEn}</p>}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ==================================================== */}
       {/* 3. BRANCHES TAB */}
-      {/* ==================================================== */}
       {activeTab === 'branches' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900">
-              {isRtl ? 'فروع الجمعيات الإقليمية والمحلية' : 'Branch Locations'} ({branches.length})
+            <h2 className="text-sm font-bold text-slate-900">
+              {isRtl ? 'فروع الجمعيات' : 'Branch Locations'} ({branches.length})
             </h2>
             <button
               onClick={() => {
@@ -318,93 +282,84 @@ export default function AdminPanel() {
                 setBranchForm(prev => ({ ...prev, orgId: organizations[0].id }));
                 setShowBranchModal(true);
               }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
             >
-              <Plus className="w-4 h-4" />
-              <span>{isRtl ? 'إضافة فرع جديد' : 'Add Branch'}</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isRtl ? 'إضافة فرع' : 'Add Branch'}</span>
             </button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {branches.map(branch => (
-              <div key={branch.id} className="p-5 rounded-2xl bg-white border border-slate-200 shadow-xs">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full">
-                    {branch.orgName}
-                  </span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
-                    branch.status === 'disaster_zone' ? 'bg-red-100 text-red-700' : 'bg-emerald-100 text-emerald-800'
-                  }`}>
-                    {branch.status === 'disaster_zone' ? (isRtl ? 'منطقة طوارئ' : 'Disaster') : (isRtl ? 'نشط' : 'Active')}
-                  </span>
+              <div key={branch.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-2xs space-y-1">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-bold text-sm text-slate-900">{branch.name}</h3>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-emerald-100 text-emerald-800">{branch.status}</span>
                 </div>
-                <h3 className="text-sm font-bold text-slate-900 mb-1">{branch.name}</h3>
                 <p className="text-xs text-slate-500">📍 {branch.wilaya} {branch.address ? `— ${branch.address}` : ''}</p>
-                {branch.phone && <p className="text-xs text-slate-500 mt-1">📞 {branch.phone}</p>}
+                {branch.phone && <p className="text-xs text-slate-500 font-mono">📞 {branch.phone}</p>}
               </div>
             ))}
           </div>
         </div>
       )}
 
-      {/* ==================================================== */}
       {/* 4. USERS TAB */}
-      {/* ==================================================== */}
       {activeTab === 'users' && (
         <div className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-base font-bold text-slate-900">
-              {isRtl ? 'حسابات منسقي الفروع' : 'Authorized Staff'} ({systemUsers.length})
-            </h2>
+            <div>
+              <h2 className="text-sm font-bold text-slate-900">
+                {isRtl ? 'حسابات المنسقين والمشرفين' : 'Staff Accounts'} ({systemUsers.length})
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                {isRtl ? 'يمكنك إضافة حساب جديد وتعيين كلمة المرور الخاصة به.' : 'Create new coordinator accounts with passwords.'}
+              </p>
+            </div>
             <button
               onClick={() => {
-                if (organizations.length === 0) {
-                  alert(isRtl ? "يرجى إضافة منظمة أولاً" : "Please create an organization first");
-                  return;
-                }
                 setUserForm(prev => ({
                   ...prev,
-                  orgId: organizations[0].id,
-                  branchId: branches[0]?.id || ''
+                  orgId: organizations[0]?.id || 'org-crescent-dz',
+                  branchId: branches[0]?.id || 'branch-cra-blida'
                 }));
                 setShowUserModal(true);
               }}
-              className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
+              className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-800 hover:bg-emerald-900 text-white text-xs font-bold shadow-xs transition"
             >
-              <Plus className="w-4 h-4" />
-              <span>{isRtl ? 'إضافة منسق / مستخدم' : 'Add Staff User'}</span>
+              <Plus className="w-3.5 h-3.5" />
+              <span>{isRtl ? 'إضافة منسق' : 'Add User'}</span>
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+          <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-2xs">
             <table className="w-full text-xs text-right">
               <thead className="bg-slate-50 text-slate-500 font-bold border-b border-slate-200">
                 <tr>
-                  <th className="px-5 py-3">{isRtl ? 'الاسم والبريد' : 'Name & Email'}</th>
-                  <th className="px-5 py-3">{isRtl ? 'المنظمة والفرع' : 'Org & Branch'}</th>
-                  <th className="px-5 py-3">{isRtl ? 'الدور' : 'Role'}</th>
-                  <th className="px-5 py-3 text-center">{isRtl ? 'حذف' : 'Delete'}</th>
+                  <th className="px-4 py-2.5">{isRtl ? 'الاسم والبريد' : 'Name & Email'}</th>
+                  <th className="px-4 py-2.5">{isRtl ? 'الفرع' : 'Branch'}</th>
+                  <th className="px-4 py-2.5">{isRtl ? 'الدور' : 'Role'}</th>
+                  <th className="px-4 py-2.5 text-center">{isRtl ? 'حذف' : 'Delete'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {systemUsers.map(u => (
                   <tr key={u.uid || u.email} className="hover:bg-slate-50 transition">
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-2.5">
                       <p className="font-bold text-slate-900">{u.displayName}</p>
-                      <p className="text-slate-400 font-mono">{u.email}</p>
+                      <p className="text-slate-400 font-mono text-[11px]">{u.email}</p>
                     </td>
-                    <td className="px-5 py-3">
-                      <p className="text-slate-800 font-medium">{u.orgName}</p>
-                      <p className="text-slate-400">{u.branchName || '—'}</p>
+                    <td className="px-4 py-2.5 text-slate-600">
+                      {u.branchName || u.orgName || '—'}
                     </td>
-                    <td className="px-5 py-3">
+                    <td className="px-4 py-2.5">
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         u.role === 'super_admin' ? 'bg-purple-100 text-purple-800' : 'bg-emerald-100 text-emerald-800'
                       }`}>
                         {u.role}
                       </span>
                     </td>
-                    <td className="px-5 py-3 text-center">
+                    <td className="px-4 py-2.5 text-center">
                       {u.role !== 'super_admin' && (
                         <button
                           onClick={() => {
@@ -412,9 +367,9 @@ export default function AdminPanel() {
                               deleteAdminUser(u.uid);
                             }
                           }}
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition"
+                          className="p-1 text-red-500 hover:bg-red-50 rounded-lg"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       )}
                     </td>
@@ -426,37 +381,30 @@ export default function AdminPanel() {
         </div>
       )}
 
-      {/* ==================================================== */}
       {/* 5. DATA TAB */}
-      {/* ==================================================== */}
       {activeTab === 'data' && (
-        <div className="space-y-4">
-          <h2 className="text-base font-bold text-slate-900">
-            {isRtl ? 'إدارة كافة نداءات المساعدة' : 'Manage Needs'} ({needs.length})
+        <div className="space-y-3">
+          <h2 className="text-sm font-bold text-slate-900">
+            {isRtl ? 'إدارة وحذف النداءات' : 'Manage Needs'} ({needs.length})
           </h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="space-y-2">
             {needs.map(n => (
-              <div key={n.id} className="p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
-                <div className="flex items-start justify-between gap-2 mb-2">
-                  <span className="font-bold text-xs text-slate-900">{n.title || n.needDescription}</span>
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                    {n.status}
-                  </span>
+              <div key={n.id} className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs">
+                <div>
+                  <span className="font-bold text-slate-900 block">{n.title || n.needDescription}</span>
+                  <span className="text-slate-500">{n.branchName} • {n.location?.city || n.location?.wilaya}</span>
                 </div>
-                <p className="text-xs text-slate-500 mb-3">{n.branchName} • 📍 {n.location?.city || n.location?.wilaya}</p>
-                <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
-                  <button
-                    onClick={() => {
-                      if (confirm(isRtl ? 'حذف هذا الطلب؟' : 'Delete request?')) {
-                        deleteNeed(n.id);
-                      }
-                    }}
-                    className="p-1 text-red-500 hover:bg-red-50 rounded-lg"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+                <button
+                  onClick={() => {
+                    if (confirm(isRtl ? 'حذف هذا النداء نهائياً؟' : 'Delete this need?')) {
+                      deleteNeed(n.id);
+                    }
+                  }}
+                  className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             ))}
           </div>
@@ -467,7 +415,7 @@ export default function AdminPanel() {
       {showOrgModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900 mb-4">{isRtl ? 'إضافة منظمة جديدة' : 'Add Org'}</h3>
+            <h3 className="text-sm font-bold text-slate-900 mb-3">{isRtl ? 'إضافة منظمة جديدة' : 'Add Org'}</h3>
             <form onSubmit={handleCreateOrg} className="space-y-3">
               <input
                 required
@@ -475,13 +423,13 @@ export default function AdminPanel() {
                 placeholder={isRtl ? 'اسم المنظمة' : 'Org Name'}
                 value={orgForm.name}
                 onChange={e => setOrgForm({ ...orgForm, name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs"
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
               />
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setShowOrgModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">
                   {isRtl ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 rounded-xl">
+                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 rounded-xl">
                   {isRtl ? 'حفظ' : 'Save'}
                 </button>
               </div>
@@ -493,7 +441,7 @@ export default function AdminPanel() {
       {showBranchModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900 mb-4">{isRtl ? 'إضافة فرع جديد' : 'Add Branch'}</h3>
+            <h3 className="text-sm font-bold text-slate-900 mb-3">{isRtl ? 'إضافة فرع جديد' : 'Add Branch'}</h3>
             <form onSubmit={handleCreateBranch} className="space-y-3">
               <input
                 required
@@ -501,12 +449,12 @@ export default function AdminPanel() {
                 placeholder={isRtl ? 'اسم الفرع' : 'Branch Name'}
                 value={branchForm.name}
                 onChange={e => setBranchForm({ ...branchForm, name: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs"
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
               />
               <select
                 value={branchForm.wilaya}
                 onChange={e => setBranchForm({ ...branchForm, wilaya: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs bg-white"
+                className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white"
               >
                 {ALGERIA_WILAYAS.map(w => (
                   <option key={w.code} value={w.nameAr}>{w.code} - {w.nameAr}</option>
@@ -516,7 +464,7 @@ export default function AdminPanel() {
                 <button type="button" onClick={() => setShowBranchModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">
                   {isRtl ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 rounded-xl">
+                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 rounded-xl">
                   {isRtl ? 'حفظ' : 'Save'}
                 </button>
               </div>
@@ -528,30 +476,50 @@ export default function AdminPanel() {
       {showUserModal && (
         <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl p-6 w-full max-w-md shadow-xl border border-slate-200">
-            <h3 className="text-base font-bold text-slate-900 mb-4">{isRtl ? 'إضافة منسق' : 'Add Staff'}</h3>
+            <h3 className="text-sm font-bold text-slate-900 mb-3">{isRtl ? 'إضافة حساب منسق جديد' : 'Add Staff User'}</h3>
             <form onSubmit={handleCreateUser} className="space-y-3">
-              <input
-                required
-                type="text"
-                placeholder={isRtl ? 'الاسم الكامل' : 'Display Name'}
-                value={userForm.displayName}
-                onChange={e => setUserForm({ ...userForm, displayName: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs"
-              />
-              <input
-                required
-                type="email"
-                placeholder="example@gmail.com"
-                value={userForm.email}
-                onChange={e => setUserForm({ ...userForm, email: e.target.value })}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-xs dir-ltr"
-              />
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">{isRtl ? 'الاسم الكامل' : 'Full Name'}</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="محمد بن علي"
+                  value={userForm.displayName}
+                  onChange={e => setUserForm({ ...userForm, displayName: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">{isRtl ? 'البريد الإلكتروني أو اسم المستخدم' : 'Email / Username'}</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="blida@hopelink.dz"
+                  value={userForm.email}
+                  onChange={e => setUserForm({ ...userForm, email: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs dir-ltr"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-semibold text-slate-600 mb-1">{isRtl ? 'كلمة المرور' : 'Password'}</label>
+                <input
+                  required
+                  type="text"
+                  placeholder="password123"
+                  value={userForm.password}
+                  onChange={e => setUserForm({ ...userForm, password: e.target.value })}
+                  className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs dir-ltr font-mono"
+                />
+              </div>
+
               <div className="flex justify-end gap-2 pt-2">
                 <button type="button" onClick={() => setShowUserModal(false)} className="px-4 py-2 text-xs font-bold text-slate-600 bg-slate-100 rounded-xl">
                   {isRtl ? 'إلغاء' : 'Cancel'}
                 </button>
-                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 hover:bg-emerald-900 rounded-xl">
-                  {isRtl ? 'حفظ' : 'Save'}
+                <button type="submit" disabled={saving} className="px-5 py-2 text-xs font-bold text-white bg-emerald-800 rounded-xl">
+                  {isRtl ? 'إنشاء الحساب' : 'Create Account'}
                 </button>
               </div>
             </form>

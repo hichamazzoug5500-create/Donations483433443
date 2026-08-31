@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { 
-  signInWithPopup,
   signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
   signOut, 
   onAuthStateChanged 
 } from 'firebase/auth';
@@ -15,56 +15,49 @@ import {
   getDocs,
   serverTimestamp 
 } from 'firebase/firestore';
-import { auth, db, googleProvider, isFirebaseConfigured } from '../firebase/config';
-import { DEMO_USERS, DEMO_ORGANIZATIONS, DEMO_BRANCHES } from '../data/mockReliefData';
+import { initializeApp, getApps } from 'firebase/app';
+import { getAuth } from 'firebase/auth';
+import { auth, db } from '../firebase/config';
 
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
-  const context = useContext(DataContextContext || AuthContext);
+  const context = useContext(AuthContext);
   if (!context) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
 };
 
-// Fix typo helper if needed
-const DataContextContext = null;
+// Secondary Firebase app to create users without disconnecting the logged-in admin
+const getSecondaryAuth = () => {
+  const secondaryAppName = 'SecondaryAuthApp';
+  let secondaryApp = getApps().find(app => app.name === secondaryAppName);
+  if (!secondaryApp) {
+    const config = {
+      apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDxuoWkEP_o8T_Qdt8zZA4CiOKFsBp75_A",
+      authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "donations-bd9f2.firebaseapp.com",
+      projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "donations-bd9f2",
+      storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "donations-bd9f2.firebasestorage.app",
+      messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "152610577314",
+      appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:152610577314:web:955afa07488b8b897670fb"
+    };
+    secondaryApp = initializeApp(config, secondaryAppName);
+  }
+  return getAuth(secondaryApp);
+};
 
 export const AuthProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [isDemoMode, setIsDemoMode] = useState(!isFirebaseConfigured);
   const [authError, setAuthError] = useState(null);
 
   useEffect(() => {
-    if (!isFirebaseConfigured || isDemoMode) {
-      const savedDemoUser = localStorage.getItem('relief_demo_user');
-      if (savedDemoUser) {
-        try {
-          const parsed = JSON.parse(savedDemoUser);
-          setCurrentUser({ uid: parsed.uid, email: parsed.email, displayName: parsed.displayName });
-          setUserProfile(parsed);
-        } catch (e) {
-          console.error("Failed to parse demo user session:", e);
-        }
-      } else {
-        // Default to Blida branch member for immediate demo visualization
-        const defaultUser = DEMO_USERS['blida-cra@hopelink.dz'];
-        setCurrentUser({ uid: defaultUser.uid, email: defaultUser.email, displayName: defaultUser.displayName });
-        setUserProfile(defaultUser);
-        localStorage.setItem('relief_demo_user', JSON.stringify(defaultUser));
-      }
-      setLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
       if (user) {
         try {
-          // 1. Check direct doc by UID
           const userDocRef = doc(db, 'users', user.uid);
           const docSnap = await getDoc(userDocRef);
 
@@ -73,54 +66,53 @@ export const AuthProvider = ({ children }) => {
             setUserProfile({
               uid: user.uid,
               email: user.email,
-              displayName: data.displayName || user.displayName || '',
-              photoURL: user.photoURL || data.photoURL || '',
+              displayName: data.displayName || user.displayName || 'مستخدم المنظومة',
+              role: data.role || (user.email === 'admin@hopelink.dz' ? 'super_admin' : 'branch_member'),
+              orgId: data.orgId || 'org-crescent-dz',
+              orgName: data.orgName || 'الهلال الأحمر الجزائري',
+              branchId: data.branchId || 'branch-cra-algiers',
+              branchName: data.branchName || 'الفرع الميداني',
+              city: data.city || data.wilaya || 'الجزائر',
+              phone: data.phone || '',
               ...data,
               isProfileComplete: true
             });
             setAuthError(null);
           } else {
-            // 2. Check if admin pre-created by Email query
-            const q = query(collection(db, 'users'), where('email', '==', user.email.toLowerCase()));
-            const querySnap = await getDocs(q);
+            // First-time doc creation for this user
+            const isAdmin = user.email?.toLowerCase().includes('admin') || user.email === 'admin@hopelink.dz';
+            const initialProfile = {
+              uid: user.uid,
+              email: user.email,
+              displayName: isAdmin ? 'المشرف العام (Admin)' : (user.displayName || 'منسق الفرع'),
+              role: isAdmin ? 'super_admin' : 'branch_member',
+              orgId: 'org-crescent-dz',
+              orgName: 'الهلال الأحمر الجزائري',
+              branchId: isAdmin ? 'branch-hq' : 'branch-cra-blida',
+              branchName: isAdmin ? 'الإدارة العامة والمقر الوطني' : 'فرع ولاية البليدة',
+              city: 'الجزائر العاصمة',
+              phone: '0550 12 34 56',
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString(),
+              isProfileComplete: true
+            };
 
-            if (!querySnap.empty) {
-              const matchedDoc = querySnap.docs[0];
-              const data = matchedDoc.data();
-              // Re-bind to authenticated UID
-              const mergedProfile = {
-                ...data,
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName || data.displayName,
-                photoURL: user.photoURL || data.photoURL || '',
-                updatedAt: new Date().toISOString()
-              };
-              await setDoc(userDocRef, mergedProfile, { merge: true });
-              setUserProfile({ ...mergedProfile, isProfileComplete: true });
-              setAuthError(null);
-            } else {
-              // Not pre-registered by admin
-              console.warn("Unregistered account attempted sign in:", user.email);
-              setUserProfile({
-                uid: user.uid,
-                email: user.email,
-                displayName: user.displayName || '',
-                role: null,
-                isProfileComplete: false,
-                isUnregistered: true
-              });
-              setAuthError("حسابك غير مسجل في المنظومة. يرجى التواصل مع مسؤول المنظمة لإضافتك.");
-            }
+            await setDoc(userDocRef, initialProfile, { merge: true });
+            setUserProfile(initialProfile);
+            setAuthError(null);
           }
         } catch (error) {
           console.error("Error fetching user profile:", error);
           setUserProfile({
             uid: user.uid,
             email: user.email,
-            displayName: user.displayName,
-            role: null,
-            isProfileComplete: false
+            displayName: user.displayName || 'مستخدم',
+            role: user.email === 'admin@hopelink.dz' ? 'super_admin' : 'branch_member',
+            orgId: 'org-crescent-dz',
+            orgName: 'الهلال الأحمر الجزائري',
+            branchId: 'branch-cra-algiers',
+            branchName: 'الفرع الميداني',
+            isProfileComplete: true
           });
         }
       } else {
@@ -131,146 +123,132 @@ export const AuthProvider = ({ children }) => {
     });
 
     return () => unsubscribe();
-  }, [isDemoMode]);
+  }, []);
 
-  // Google Sign-In (Pre-registered check)
-  const loginWithGoogle = async () => {
+  // Standard Email & Password Login
+  const loginWithEmail = async (identifier, password) => {
     setAuthError(null);
-    if (!isFirebaseConfigured || isDemoMode) {
-      // Default to Algiers branch demo or super admin
-      const defaultUser = DEMO_USERS['admin@hopelink.dz'];
-      setCurrentUser({ uid: defaultUser.uid, email: defaultUser.email, displayName: defaultUser.displayName });
-      setUserProfile(defaultUser);
-      localStorage.setItem('relief_demo_user', JSON.stringify(defaultUser));
-      return { user: defaultUser, success: true };
+    let email = identifier.trim().toLowerCase();
+
+    // Support typing 'admin' as shortcut
+    if (email === 'admin') {
+      email = 'admin@hopelink.dz';
+    } else if (!email.includes('@')) {
+      email = `${email}@hopelink.dz`;
     }
 
     try {
-      const result = await signInWithPopup(auth, googleProvider);
-      const user = result.user;
-
-      const userDocRef = doc(db, 'users', user.uid);
-      const docSnap = await getDoc(userDocRef);
-
-      if (docSnap.exists()) {
-        const data = docSnap.data();
-        const profile = {
-          uid: user.uid,
-          email: user.email,
-          displayName: data.displayName || user.displayName || '',
-          photoURL: user.photoURL || data.photoURL || '',
-          ...data,
-          isProfileComplete: true
-        };
-        setUserProfile(profile);
-        return { user, profile, success: true };
-      }
-
-      // Check if admin registered by email
-      const q = query(collection(db, 'users'), where('email', '==', user.email.toLowerCase()));
-      const querySnap = await getDocs(q);
-
-      if (!querySnap.empty) {
-        const matchedDoc = querySnap.docs[0];
-        const data = matchedDoc.data();
-        const mergedProfile = {
-          ...data,
-          uid: user.uid,
-          email: user.email,
-          displayName: user.displayName || data.displayName,
-          photoURL: user.photoURL || data.photoURL || '',
-          updatedAt: new Date().toISOString()
-        };
-        await setDoc(userDocRef, mergedProfile, { merge: true });
-        setUserProfile({ ...mergedProfile, isProfileComplete: true });
-        return { user, profile: mergedProfile, success: true };
-      }
-
-      // Not pre-registered
-      setAuthError("حسابك غير مسجل في المنظومة. يرجى التواصل مع مسؤول المنظمة لإضافتك.");
-      return { 
-        user, 
-        profile: { isUnregistered: true, email: user.email }, 
-        success: false, 
-        error: "Unregistered account" 
-      };
+      // 1. Try standard sign-in
+      const res = await signInWithEmailAndPassword(auth, email, password);
+      return { user: res.user, success: true };
     } catch (err) {
-      console.error("Google sign in error:", err);
-      setAuthError(err.message);
+      console.warn("Sign-in attempt:", err.code);
+
+      // If user-not-found, and it's the admin bootstrap account, auto-create it
+      if (
+        (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') &&
+        (email === 'admin@hopelink.dz' || email.startsWith('admin@'))
+      ) {
+        try {
+          const createRes = await createUserWithEmailAndPassword(auth, email, password);
+          const adminUser = createRes.user;
+
+          const adminProfile = {
+            uid: adminUser.uid,
+            email: adminUser.email,
+            displayName: 'المشرف العام (Admin)',
+            role: 'super_admin',
+            orgId: 'org-crescent-dz',
+            orgName: 'الهلال الأحمر الجزائري',
+            branchId: 'branch-hq',
+            branchName: 'المقر العام للتنسيق',
+            city: 'الجزائر العاصمة',
+            phone: '0550 00 00 00',
+            createdAt: new Date().toISOString(),
+            isProfileComplete: true
+          };
+
+          await setDoc(doc(db, 'users', adminUser.uid), adminProfile);
+          setUserProfile(adminProfile);
+          return { user: adminUser, profile: adminProfile, success: true };
+        } catch (createErr) {
+          // If creation fails due to email already in use, it was just wrong password
+          if (createErr.code === 'auth/email-already-in-use') {
+            throw new Error('كلمة المرور غير صحيحة. يرجى التأكد من كلمة المرور.');
+          }
+          throw createErr;
+        }
+      }
+
+      if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+        throw new Error('كلمة المرور غير صحيحة.');
+      } else if (err.code === 'auth/user-not-found') {
+        throw new Error('هذا الحساب غير مسجل. يرجى طلب إنشاء حساب من المشرف.');
+      } else if (err.code === 'auth/invalid-email') {
+        throw new Error('صيغة البريد الإلكتروني غير صحيحة.');
+      }
       throw err;
     }
   };
 
-  // Instant demo switch between predefined roles and branches
-  const loginDemoAccount = (emailKey) => {
-    const matched = DEMO_USERS[emailKey];
-    if (matched) {
-      setCurrentUser({ uid: matched.uid, email: matched.email, displayName: matched.displayName });
-      setUserProfile(matched);
-      localStorage.setItem('relief_demo_user', JSON.stringify(matched));
-      setAuthError(null);
-      return matched;
+  // Register a new staff user by Admin without logging the admin out
+  const createNewStaffAccount = async ({ email, password, displayName, role, orgId, orgName, branchId, branchName, phone }) => {
+    let cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail.includes('@')) {
+      cleanEmail = `${cleanEmail}@hopelink.dz`;
     }
-    return null;
-  };
 
-  const updateProfileBasic = async ({ displayName, phone, photoURL }) => {
-    if (!currentUser) throw new Error("No active user session");
+    const secondaryAuth = getSecondaryAuth();
+    const cred = await createUserWithEmailAndPassword(secondaryAuth, cleanEmail, password || 'password123');
+    const newUid = cred.user.uid;
 
-    const updates = {
-      displayName: displayName || userProfile?.displayName || '',
-      phone: phone || userProfile?.phone || '',
-      photoURL: photoURL || userProfile?.photoURL || '',
-      updatedAt: new Date().toISOString()
+    const newProfile = {
+      uid: newUid,
+      email: cleanEmail,
+      displayName: displayName || 'منسق فرع',
+      role: role || 'branch_member',
+      orgId: orgId || 'org-crescent-dz',
+      orgName: orgName || 'الهلال الأحمر الجزائري',
+      branchId: branchId || 'branch-cra-blida',
+      branchName: branchName || 'فرع ولاية البليدة',
+      phone: phone || '',
+      createdAt: new Date().toISOString(),
+      isProfileComplete: true
     };
 
-    if (!isFirebaseConfigured || isDemoMode) {
-      const updated = { ...userProfile, ...updates };
-      setUserProfile(updated);
-      localStorage.setItem('relief_demo_user', JSON.stringify(updated));
-      return updated;
-    }
+    await setDoc(doc(db, 'users', newUid), newProfile);
+    await signOut(secondaryAuth); // Sign out secondary instance so it doesn't leak state
 
-    const userRef = doc(db, 'users', currentUser.uid);
-    await setDoc(userRef, updates, { merge: true });
-    setUserProfile(prev => ({ ...prev, ...updates }));
+    return newProfile;
   };
 
   const logout = async () => {
-    if (!isFirebaseConfigured || isDemoMode) {
-      setCurrentUser(null);
-      setUserProfile(null);
-      localStorage.removeItem('relief_demo_user');
-      return;
-    }
-
     await signOut(auth);
     setCurrentUser(null);
     setUserProfile(null);
   };
 
-  const isSuperAdmin = Boolean(userProfile && userProfile.role === 'super_admin');
+  const isSuperAdmin = Boolean(
+    currentUser?.email === 'admin@hopelink.dz' || 
+    userProfile?.role === 'super_admin'
+  );
+
   const isBranchMember = Boolean(userProfile && userProfile.role === 'branch_member');
-  const isRegisteredMember = Boolean(userProfile && userProfile.orgId && userProfile.branchId);
 
   const value = {
     currentUser,
     userProfile,
     loading,
-    isDemoMode,
-    setIsDemoMode,
     isSuperAdmin,
     isBranchMember,
-    isRegisteredMember,
     authError,
     setAuthError,
-    loginWithGoogle,
-    loginDemoAccount,
-    updateProfileBasic,
+    loginWithEmail,
+    createNewStaffAccount,
     logout,
-    role: userProfile?.role || null,
-    currentOrgId: userProfile?.orgId || null,
-    currentBranchId: userProfile?.branchId || null
+    role: userProfile?.role || (isSuperAdmin ? 'super_admin' : 'branch_member'),
+    currentOrgId: userProfile?.orgId || 'org-crescent-dz',
+    currentBranchId: userProfile?.branchId || 'branch-cra-algiers'
   };
 
   return (
