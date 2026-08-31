@@ -56,5 +56,16 @@ export const ALGERIA_WILAYAS = [
   { code: '55', nameAr: 'تقرت', nameEn: 'Touggourt', lat: 33.1053, lng: 6.0583 },
   { code: '56', nameAr: 'جانت', nameEn: 'Djanet', lat: 24.5550, lng: 9.4850 },
   { code: '57', nameAr: 'المغير', nameEn: 'El M\'Ghair', lat: 33.9500, lng: 5.9167 },
-  { code: '58', nameAr: 'المنيعة', nameEn: 'El Meniaa', lat: 30.5833, lng: 2.8833 }
+  { code: '58', nameAr: 'المنيعة', nameEn: 'El Meniaa', lat: 30.5833, lng: 2.8833 },
+  { code: '59', nameAr: 'آفلو', nameEn: 'Aflou', lat: 34.1167, lng: 2.1000 },
+  { code: '60', nameAr: 'بريكة', nameEn: 'Barika', lat: 35.3897, lng: 5.3658 },
+  { code: '61', nameAr: 'القنطرة', nameEn: 'El Kantara', lat: 35.2250, lng: 5.7000 },
+  { code: '62', nameAr: 'بئر العاتر', nameEn: 'Bir El Ater', lat: 34.7500, lng: 8.0667 },
+  { code: '63', nameAr: 'العريشة', nameEn: 'El Aricha', lat: 34.2333, lng: -1.4167 },
+  { code: '64', nameAr: 'قصر الشلالة', nameEn: 'Ksar Chellala', lat: 35.2167, lng: 2.3167 },
+  { code: '65', nameAr: 'عين وسارة', nameEn: 'Ain Oussera', lat: 35.4500, lng: 2.9000 },
+  { code: '66', nameAr: 'مسعد', nameEn: 'Messaad', lat: 34.1667, lng: 3.5000 },
+  { code: '67', nameAr: 'قصر البخاري', nameEn: 'Ksar El Boukhari', lat: 35.8833, lng: 2.7500 },
+  { code: '68', nameAr: 'بوسعادة', nameEn: 'Bou Saada', lat: 35.2833, lng: 4.1833 },
+  { code: '69', nameAr: 'الأبيض سيدي الشيخ', nameEn: 'El Abiodh Sidi Cheikh', lat: 32.8944, lng: 0.5472 }
 ];

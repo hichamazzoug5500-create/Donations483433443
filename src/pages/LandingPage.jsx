@@ -3,258 +3,173 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { 
-  Building2,
-  HeartHandshake,
-  ShieldCheck,
-  Package,
-  Utensils,
-  Shirt,
-  Stethoscope,
-  Home,
-  ArrowRight,
-  ArrowLeft,
-  Lock,
-  CheckCircle2,
-  PlusCircle,
-  Search,
-  Sparkles
+  Building2, 
+  ShieldCheck, 
+  Truck, 
+  MapPin, 
+  AlertTriangle, 
+  Layers, 
+  ArrowRight, 
+  ArrowLeft, 
+  Globe2, 
+  CheckCircle,
+  PackageCheck,
+  Compass
 } from 'lucide-react';
 
-export const LandingPage = () => {
-  const { currentUser, role: userRole } = useAuth();
-  const { t, isRTL } = useLanguage();
+export default function LandingPage() {
+  const { currentUser } = useAuth();
+  const { isRtl, t } = useLanguage();
   const navigate = useNavigate();
 
-  const handleCharityAction = () => {
+  const handleEnterPlatform = () => {
     if (currentUser) {
       navigate('/dashboard');
     } else {
-      navigate('/signup?role=recipient');
+      navigate('/login');
     }
   };
 
-  const handleDonorAction = () => {
-    if (currentUser) {
-      navigate('/donor');
-    } else {
-      navigate('/signup?role=donor');
-    }
-  };
-
-  const CATEGORIES = [
-    { key: 'catFood', icon: Utensils, color: 'bg-emerald-50 text-emerald-900 border-emerald-200' },
-    { key: 'catClothing', icon: Shirt, color: 'bg-blue-50 text-blue-900 border-blue-200' },
-    { key: 'catMedical', icon: Stethoscope, color: 'bg-rose-50 text-rose-900 border-rose-200' },
-    { key: 'catShelter', icon: Home, color: 'bg-amber-50 text-amber-900 border-amber-200' },
-    { key: 'catOther', icon: Package, color: 'bg-purple-50 text-purple-900 border-purple-200' }
-  ];
-
-  const ArrowIcon = isRTL ? ArrowLeft : ArrowRight;
+  const ArrowIcon = isRtl ? ArrowLeft : ArrowRight;
 
   return (
-    <div className="space-y-6 sm:space-y-10 pb-safe-nav md:pb-16">
+    <div className="space-y-12 pb-16">
       
-      {/* 🌟 1. HERO SECTION & PLATFORM PURPOSE 🌟 */}
-      <section className="bg-slate-900 text-white pt-6 sm:pt-14 pb-8 sm:pb-18 px-4 sm:px-6 lg:px-8 border-b border-slate-800 relative overflow-hidden">
+      {/* Hero Command Banner */}
+      <section className="bg-gradient-to-b from-slate-900 via-slate-800 to-slate-900 text-white pt-12 pb-18 px-4 sm:px-6 lg:px-8 border-b border-slate-800 relative overflow-hidden">
         
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-5 pointer-events-none bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+        {/* Decorative Grid */}
+        <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#10b981_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
-        <div className="max-w-5xl mx-auto text-center space-y-3 sm:space-y-6 relative z-10">
+        <div className="max-w-4xl mx-auto text-center space-y-6 relative z-10">
           
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-900/90 text-emerald-300 border border-emerald-700/60 text-[10px] sm:text-xs font-bold shadow-xs">
-            <ShieldCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-400" />
-            <span>{t('heroBadge')}</span>
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-bold shadow-sm">
+            <ShieldCheck className="w-4 h-4 text-emerald-400" />
+            <span>{isRtl ? 'المنظومة الرقمية الوطنية لتنسيق الإغاثة في الكوارث 🇩🇿' : 'National Disaster Relief Coordination Network 🇩🇿'}</span>
           </div>
 
-          <h1 className="text-xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-snug sm:leading-tight">
-            {t('heroTitle')}
-            <span className="block text-emerald-400 mt-1 sm:mt-2 text-lg sm:text-3xl md:text-4xl font-bold">
-              {t('heroTitleSub')}
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight leading-tight">
+            {isRtl ? 'تنسيق لوجستي فوري بين فروع الجمعيات والهلال الأحمر' : 'Instant Inter-Branch Disaster Coordination'}
+            <span className="block text-emerald-400 mt-2 text-2xl sm:text-4xl font-extrabold">
+              {isRtl ? 'لسد الاحتياجات ونقل المعونات في مناطق الكوارث' : 'Connecting Supply Hubs with Ground Emergency Zones'}
             </span>
           </h1>
 
-          <p className="text-slate-300 text-[11px] sm:text-base max-w-2xl mx-auto leading-relaxed">
-            {t('heroSubtitle')}
+          <p className="text-slate-300 text-sm sm:text-base max-w-2xl mx-auto leading-relaxed">
+            {isRtl 
+              ? 'تتيح المنصة للفروع الميدانية في المناطق المنكوبة نشر الاحتياجات الدقيقة لكل نقطة جغرافية، وتتيح للفروع الإقليمية والمركزية توجيه قوافل الإغاثة وتتبع مسارها لحظياً.' 
+              : 'Empowering disaster-zone branches to broadcast verified multi-item needs, while regional hubs dispatch aid convoys with live tracking.'}
           </p>
 
-          {/* 🌟 2. TWO DISTINCT INTERACTIVE WORKFLOW PATHS 🌟 */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 max-w-3xl mx-auto pt-3 sm:pt-4 text-right rtl:text-right ltr:text-left">
-            
-            {/* Path 1: Recipient / Charity Path */}
-            <div className="bg-slate-800/90 border-2 border-emerald-500/40 hover:border-emerald-400 p-4 sm:p-5 rounded-2xl shadow-lg transition-all space-y-2 sm:space-y-3 flex flex-col justify-between">
-              <div className="space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-emerald-700/80 text-white flex items-center justify-center font-bold">
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-white">
-                  {t('iAmCharity')}
-                </h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {t('charityPathDesc')}
-                </p>
-              </div>
-
-              <button
-                onClick={handleCharityAction}
-                className="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-extrabold text-xs sm:text-sm py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 min-h-[44px]"
-              >
-                <PlusCircle className="w-4 h-4" />
-                <span>{t('publishNeedsCTA')}</span>
-              </button>
-            </div>
-
-            {/* Path 2: Donor / Contributor Path */}
-            <div className="bg-slate-800/90 border-2 border-amber-500/40 hover:border-amber-400 p-4 sm:p-5 rounded-2xl shadow-lg transition-all space-y-2 sm:space-y-3 flex flex-col justify-between">
-              <div className="space-y-2">
-                <div className="w-10 h-10 rounded-xl bg-amber-600/80 text-white flex items-center justify-center font-bold">
-                  <HeartHandshake className="w-5 h-5" />
-                </div>
-                <h3 className="text-base sm:text-lg font-bold text-white">
-                  {t('iAmDonor')}
-                </h3>
-                <p className="text-xs text-slate-300 leading-relaxed">
-                  {t('donorPathDesc')}
-                </p>
-              </div>
-
-              <button
-                onClick={handleDonorAction}
-                className="w-full bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-extrabold text-xs sm:text-sm py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 min-h-[44px]"
-              >
-                <Search className="w-4 h-4" />
-                <span>{t('browseAndPledgeCTA')}</span>
-              </button>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* 🌟 3. HOW IT WORKS (كيف تعمل المنصة في 3 خطوات) 🌟 */}
-      <section id="how-it-works" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-slate-200 shadow-xs space-y-4 sm:space-y-6">
-          
-          <div className="text-center space-y-1">
-            <span className="text-[10px] sm:text-[11px] font-bold text-emerald-800 uppercase tracking-wider block">
-              {t('howItWorksBadge')}
-            </span>
-            <h2 className="text-lg sm:text-2xl font-extrabold text-slate-900">
-              {t('howItWorksTitle')}
-            </h2>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6 pt-1 sm:pt-2">
-            
-            {/* Step 1 */}
-            <div className="bg-slate-50 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 space-y-2">
-              <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-extrabold text-sm">
-                1
-              </div>
-              <h4 className="font-bold text-sm text-slate-900">{t('step1Title')}</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {t('step1Desc')}
-              </p>
-            </div>
-
-            {/* Step 2 */}
-            <div className="bg-emerald-50/70 p-3.5 sm:p-5 rounded-2xl border border-emerald-200 space-y-2">
-              <div className="w-8 h-8 rounded-xl bg-emerald-800 text-white flex items-center justify-center font-extrabold text-sm">
-                2
-              </div>
-              <h4 className="font-bold text-sm text-emerald-950">{t('step2Title')}</h4>
-              <p className="text-xs text-emerald-900 leading-relaxed">
-                {t('step2Desc')}
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="bg-slate-50 p-3.5 sm:p-5 rounded-2xl border border-slate-200/80 space-y-2">
-              <div className="w-8 h-8 rounded-xl bg-slate-900 text-white flex items-center justify-center font-extrabold text-sm">
-                3
-              </div>
-              <h4 className="font-bold text-sm text-slate-900">{t('step3Title')}</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                {t('step3Desc')}
-              </p>
-            </div>
-
-          </div>
-
-        </div>
-      </section>
-
-      {/* 🌟 4. SUPPORTED CATEGORIES 🌟 */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-white rounded-2xl sm:rounded-3xl p-5 sm:p-7 border border-slate-200 shadow-xs space-y-4">
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 text-center">
-            {t('categoriesTitle')}
-          </h3>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 sm:gap-4">
-            {CATEGORIES.map(({ key, icon: Icon, color }) => (
-              <div
-                key={key}
-                className={`p-3 sm:p-4 rounded-xl border flex flex-col items-center justify-center text-center gap-2 transition-all ${color}`}
-              >
-                <Icon className="w-6 h-6 sm:w-7 sm:h-7" />
-                <span className="text-xs font-bold">{t(key)}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* 🌟 5. DONOR PORTAL ACCESS & CALL TO ACTION 🌟 */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-950 text-white rounded-2xl sm:rounded-3xl p-6 sm:p-10 border border-slate-700 shadow-lg space-y-6">
-          <div className="max-w-3xl mx-auto text-center space-y-3">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold">
-              <Sparkles className="w-4 h-4 text-amber-400" />
-              <span>{t('donorPortalCardTitle')}</span>
-            </div>
-            <h2 className="text-xl sm:text-3xl font-extrabold">
-              {t('donorPortalCardTitle')}
-            </h2>
-            <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-              {t('donorPortalCardDesc')}
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-4xl mx-auto text-right rtl:text-right ltr:text-left">
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <span className="text-xs text-slate-200">{t('donorPortalBenefit1')}</span>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <span className="text-xs text-slate-200">{t('donorPortalBenefit2')}</span>
-            </div>
-            <div className="bg-white/5 border border-white/10 rounded-xl p-3.5 flex items-start gap-2.5">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-              <span className="text-xs text-slate-200">{t('donorPortalBenefit3')}</span>
-            </div>
-          </div>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+          {/* Action CTA */}
+          <div className="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
             <button
-              onClick={handleDonorAction}
-              className="w-full sm:w-auto bg-amber-500 hover:bg-amber-400 active:bg-amber-600 text-slate-950 font-extrabold text-xs sm:text-sm py-3.5 px-7 rounded-xl shadow-md transition-all flex items-center justify-center gap-2 min-h-[46px]"
+              onClick={handleEnterPlatform}
+              className="w-full sm:w-auto px-8 py-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-extrabold text-sm sm:text-base shadow-xl shadow-emerald-600/30 transition-all flex items-center justify-center gap-2.5 transform active:scale-95"
             >
-              <span>{t('loginToViewNeeds')}</span>
+              <span>{currentUser ? (isRtl ? 'الدخول للوحة القيادة' : 'Go to Dashboard') : (isRtl ? 'تسجيل الدخول للمنظومة' : 'Sign In to Platform')}</span>
               <ArrowIcon className="w-4 h-4" />
             </button>
 
             <button
-              onClick={handleCharityAction}
-              className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white font-bold text-xs sm:text-sm py-3.5 px-6 rounded-xl border border-white/20 transition-all flex items-center justify-center gap-2 min-h-[46px]"
+              onClick={() => navigate('/map')}
+              className="w-full sm:w-auto px-6 py-4 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-bold text-sm transition flex items-center justify-center gap-2"
             >
-              <span>{t('registerAsCharityCTA')}</span>
+              <Compass className="w-4 h-4 text-emerald-400" />
+              <span>{isRtl ? 'استعراض الخريطة الوطنية' : 'View National Map'}</span>
             </button>
           </div>
+
+        </div>
+      </section>
+
+      {/* 3 Pillars of Inter-Branch Coordination */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="text-center max-w-2xl mx-auto mb-8">
+          <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block mb-1">
+            {isRtl ? 'ركائز المنظومة' : 'Core Architecture'}
+          </span>
+          <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white">
+            {isRtl ? 'كيف يتم تنسيق المساعدات بين الفروع؟' : 'How Branches Coordinate in Crises'}
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Pillar 1 */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 flex items-center justify-center font-black">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+              {isRtl ? '1. حصر الاحتياجات الميدانية' : '1. Rapid Needs Assessment'}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              {isRtl 
+                ? 'ينشر الفرع الموجود في منطقة الكارثة طلبات محددة (طرود، مياه، أدوية، خيام) مع تحديد الموقع الجغرافي وحالة الطرق والأولوية P1-P4.' 
+                : 'Frontline branches log precise multi-item requisitions with GPS tags, road access status, and standard P1-P4 urgency.'}
+            </p>
+          </div>
+
+          {/* Pillar 2 */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 flex items-center justify-center font-black">
+              <Truck className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+              {isRtl ? '2. استجابة الفروع وتسيير القوافل' : '2. Inter-Branch Aid Dispatch'}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              {isRtl 
+                ? 'تطلع الفروع الأخرى على النداءات وتلتزم بتوفير المواد المتاحة بمستودعاتها مع تسجيل ترقيم الشاحنات وهوية السائق وموعد الوصول.' 
+                : 'Neighboring and national branches review open requisitions, commit stock, and log convoy vehicles and driver details.'}
+            </p>
+          </div>
+
+          {/* Pillar 3 */}
+          <div className="p-6 rounded-3xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm space-y-3">
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 flex items-center justify-center font-black">
+              <PackageCheck className="w-6 h-6" />
+            </div>
+            <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+              {isRtl ? '3. تتبع المسار والتفريغ بالمستودع' : '3. Convoy Tracking & Handover'}
+            </h3>
+            <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+              {isRtl 
+                ? 'تتبع خطي عبر 6 مراحل (من الالتزام حتى التفريغ والتأكيد) مع تحديث نسب استيفاء الاحتياجات تلقائياً وبشكل موثق.' 
+                : '6-stage tracking pipeline from pledge to warehouse check-in, automatically updating item fulfillment metrics.'}
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Security & Access Notice */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="p-6 sm:p-8 rounded-3xl bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row items-center justify-between gap-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 rounded-2xl bg-emerald-600 text-white shrink-0">
+              <ShieldCheck className="w-6 h-6" />
+            </div>
+            <div>
+              <h4 className="text-base font-bold text-slate-900 dark:text-white mb-0.5">
+                {isRtl ? 'بيئة تشغيلية آمنة ومخصصة للمنظمات الإنسانية' : 'Authorized Humanitarian Operations Environment'}
+              </h4>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                {isRtl ? 'يتم التحقق من الفروع والمستخدمين مسبقاً لمنع ازدواجية المساعدات وضمان وصول القوافل لمستحقيها.' : 'Branch access and coordinator roles are strictly managed by organization leadership.'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleEnterPlatform}
+            className="px-6 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition shrink-0"
+          >
+            {isRtl ? 'تسجيل الدخول المعتمد' : 'Authorized Sign In'}
+          </button>
         </div>
       </section>
 
     </div>
   );
-};
+}
+
+export { LandingPage };
