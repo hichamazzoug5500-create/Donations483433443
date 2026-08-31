@@ -3,25 +3,22 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLanguage } from '../context/LanguageContext';
 import { 
-  ShieldCheck, 
   AlertCircle, 
-  Lock, 
   User, 
   KeyRound, 
   ArrowRight, 
   ArrowLeft,
   Eye,
-  EyeOff,
-  Building2
+  EyeOff
 } from 'lucide-react';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { loginWithEmail, currentUser, userProfile, authError } = useAuth();
+  const { loginWithEmail, currentUser, authError } = useAuth();
   const { isRtl } = useLanguage();
 
-  const [identifier, setIdentifier] = useState('admin');
-  const [password, setPassword] = useState('admin123456');
+  const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -67,7 +64,7 @@ export default function LoginPage() {
             {isRtl ? 'أمل' : 'HL'}
           </div>
           <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-            {isRtl ? 'تسجيل الدخول للمنظومة' : 'Staff & Admin Sign In'}
+            {isRtl ? 'تسجيل الدخول للمنظومة' : 'Staff & Coordinator Sign In'}
           </h1>
           <p className="text-xs text-slate-500 max-w-xs mx-auto leading-relaxed">
             {isRtl 
@@ -97,9 +94,10 @@ export default function LoginPage() {
               <input
                 required
                 type="text"
+                autoComplete="username"
                 value={identifier}
                 onChange={(e) => setIdentifier(e.target.value)}
-                placeholder={isRtl ? 'مثال: admin أو blida@hopelink.dz' : 'e.g. admin or blida@hopelink.dz'}
+                placeholder={isRtl ? 'اسم المستخدم أو البريد الإلكتروني' : 'Username or email'}
                 className="w-full pl-9 pr-3.5 rtl:pr-9 rtl:pl-3.5 py-2.5 rounded-xl border border-slate-300 text-xs sm:text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-700 outline-none transition"
               />
             </div>
@@ -115,6 +113,7 @@ export default function LoginPage() {
               <input
                 required
                 type={showPassword ? 'text' : 'password'}
+                autoComplete="current-password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -140,19 +139,6 @@ export default function LoginPage() {
             <ArrowIcon className="w-4 h-4" />
           </button>
         </form>
-
-        {/* Admin Credential Notice */}
-        <div className="p-3 bg-emerald-50/60 rounded-2xl border border-emerald-200/80 text-[11px] text-slate-600 space-y-1">
-          <div className="flex items-center gap-1.5 font-bold text-emerald-900">
-            <ShieldCheck className="w-4 h-4 text-emerald-700" />
-            <span>{isRtl ? 'بيانات الدخول للمشرف (Admin):' : 'Admin Login Credentials:'}</span>
-          </div>
-          <p className="text-slate-600">
-            {isRtl ? 'المستخدم:' : 'User:'} <code className="font-bold text-slate-900 bg-white px-1.5 py-0.5 rounded border border-emerald-200">admin</code>
-            {'  '}•{'  '}
-            {isRtl ? 'كلمة المرور:' : 'Password:'} <code className="font-bold text-slate-900 bg-white px-1.5 py-0.5 rounded border border-emerald-200">admin123456</code>
-          </p>
-        </div>
 
       </div>
     </div>
