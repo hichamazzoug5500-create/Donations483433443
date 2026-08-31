@@ -6,34 +6,94 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // 1. Organizations Collection
-    match /organizations/{orgId} {
-      allow read, write: if isAuth();
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
     }
 
-    // 2. Branches Collection
+    function isSuperAdmin() {
+      return isAuth() && (
+        request.auth.token.email == 'admin@hopelink.dz' ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'super_admin')
+      );
+    }
+
+    // 1. Organizations Collection
+    match /organizations/{orgId} {
+      allow read: if isAuth();
+      allow write: if isSuperAdmin();
+    }
+
+    // 2. Branches Collection (Scoped to same charity or super admin)
     match /branches/{branchId} {
-      allow read, write: if isAuth();
+      allow read: if isAuth() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserData().orgId == resource.data.orgId)
+      );
+      allow write: if isSuperAdmin();
     }
 
     // 3. Users Collection
     match /users/{userId} {
-      allow read, write: if isAuth();
+      allow read: if isAuth() && (
+        request.auth.uid == userId ||
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserData().orgId == resource.data.orgId)
+      );
+      allow write: if isAuth() && (
+        request.auth.uid == userId ||
+        isSuperAdmin()
+      );
     }
 
-    // 4. Needs (Aid Requests)
+    // 4. Needs (Disaster Relief Requests) - STRICT BACKEND CHARITY ISOLATION
     match /needs/{needId} {
-      allow read, write: if isAuth();
+      // READ: Only Super Admin or members of the EXACT SAME charity can read
+      allow read: if isAuth() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserData().orgId == resource.data.orgId)
+      );
+
+      // CREATE: Must be creating a need under their own charity's orgId
+      allow create: if isAuth() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserData().orgId == request.resource.data.orgId)
+      );
+
+      // UPDATE: Same charity members can commit/pledge/update
+      allow update: if isAuth() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserData().orgId == resource.data.orgId)
+      );
+
+      // DELETE: Only creator branch coordinator or Super Admin can delete
+      allow delete: if isAuth() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+         getUserData().orgId == resource.data.orgId &&
+         getUserData().branchId == resource.data.branchId)
+      );
     }
 
-    // 5. Dispatches (Aid sent between branches)
+    // 5. Dispatches (Convoys between branches)
     match /dispatches/{dispatchId} {
-      allow read, write: if isAuth();
+      allow read, write: if isAuth() && (
+        isSuperAdmin() ||
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && (
+          getUserData().orgId == resource.data.orgId ||
+          getUserData().orgId == resource.data.toOrgId
+        ))
+      );
     }
 
-    // 6. In-App Notifications Subcollection
+    // 6. In-App Notifications
     match /notifications/{userId}/items/{notifId} {
-      allow read, write: if isAuth();
+      allow read, write: if isAuth() && (request.auth.uid == userId || isSuperAdmin());
     }
   }
 }

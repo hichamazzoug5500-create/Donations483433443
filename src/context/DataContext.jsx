@@ -9,7 +9,8 @@ import {
   serverTimestamp,
   getDocs,
   setDoc,
-  writeBatch
+  query,
+  where
 } from 'firebase/firestore';
 import { db } from '../firebase/config';
 import { useAuth } from './AuthContext';
@@ -25,7 +26,7 @@ export const useData = () => {
 };
 
 export const DataProvider = ({ children }) => {
-  const { userProfile, currentUser } = useAuth();
+  const { userProfile, currentUser, isSuperAdmin } = useAuth();
   
   const [organizations, setOrganizations] = useState([]);
   const [branches, setBranches] = useState([]);
@@ -35,7 +36,7 @@ export const DataProvider = ({ children }) => {
   const [systemUsers, setSystemUsers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Firestore Real-Time Listeners
+  // Firestore Real-Time Listeners (DATABASE-LEVEL CHARITY ISOLATION)
   useEffect(() => {
     setLoading(true);
     const unsubs = [];
@@ -47,15 +48,21 @@ export const DataProvider = ({ children }) => {
         setOrganizations(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }, (err) => console.warn("Orgs listener notice:", err.message)));
 
-      // 2. Branches Listener
-      const branchesRef = collection(db, 'branches');
-      unsubs.push(onSnapshot(branchesRef, (snap) => {
+      // 2. Branches Listener (Scoped at database query level to user's charity)
+      const branchesQuery = (isSuperAdmin || !userProfile?.orgId)
+        ? collection(db, 'branches')
+        : query(collection(db, 'branches'), where('orgId', '==', userProfile.orgId));
+
+      unsubs.push(onSnapshot(branchesQuery, (snap) => {
         setBranches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       }, (err) => console.warn("Branches listener notice:", err.message)));
 
-      // 3. Needs Listener (Global live feed)
-      const needsRef = collection(db, 'needs');
-      unsubs.push(onSnapshot(needsRef, (snap) => {
+      // 3. Needs Listener (Scoped at database query level to user's charity)
+      const needsQuery = (isSuperAdmin || !userProfile?.orgId)
+        ? collection(db, 'needs')
+        : query(collection(db, 'needs'), where('orgId', '==', userProfile.orgId));
+
+      unsubs.push(onSnapshot(needsQuery, (snap) => {
         const docsData = snap.docs.map(d => {
           const data = d.data();
           let formattedCreatedAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
@@ -65,9 +72,12 @@ export const DataProvider = ({ children }) => {
         setNeeds(docsData);
       }, (err) => console.warn("Needs listener notice:", err.message)));
 
-      // 4. Dispatches Listener
-      const dispatchesRef = collection(db, 'dispatches');
-      unsubs.push(onSnapshot(dispatchesRef, (snap) => {
+      // 4. Dispatches Listener (Scoped at database query level)
+      const dispatchesQuery = (isSuperAdmin || !userProfile?.orgId)
+        ? collection(db, 'dispatches')
+        : query(collection(db, 'dispatches'), where('orgId', '==', userProfile.orgId));
+
+      unsubs.push(onSnapshot(dispatchesQuery, (snap) => {
         const docsData = snap.docs.map(d => {
           const data = d.data();
           let formattedCreatedAt = data.createdAt?.toDate ? data.createdAt.toDate().toISOString() : data.createdAt;
@@ -78,10 +88,12 @@ export const DataProvider = ({ children }) => {
       }, (err) => console.warn("Dispatches listener notice:", err.message)));
 
       // 5. System Users (for Admin)
-      const usersRef = collection(db, 'users');
-      unsubs.push(onSnapshot(usersRef, (snap) => {
-        setSystemUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
-      }, (err) => console.warn("Users listener notice:", err.message)));
+      if (isSuperAdmin) {
+        const usersRef = collection(db, 'users');
+        unsubs.push(onSnapshot(usersRef, (snap) => {
+          setSystemUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+        }, (err) => console.warn("Users listener notice:", err.message)));
+      }
 
       // 6. User In-App Notifications
       if (currentUser?.uid) {
@@ -100,14 +112,14 @@ export const DataProvider = ({ children }) => {
     }
 
     return () => unsubs.forEach(unsub => unsub && unsub());
-  }, [currentUser?.uid]);
+  }, [currentUser?.uid, userProfile?.orgId, isSuperAdmin]);
 
   // ==========================================
   // 1. NEEDS CRUD (Disaster Relief Needs)
   // ==========================================
   const createNeed = async (needData) => {
     const orgId = userProfile?.orgId || 'org-main';
-    const orgName = userProfile?.orgName || 'الجمعية الرئيسية';
+    const orgName = userProfile?.orgName || 'الجمعية';
     const branchId = userProfile?.branchId || 'branch-main';
     const branchName = userProfile?.branchName || userProfile?.displayName || 'الفرع الميداني';
 
