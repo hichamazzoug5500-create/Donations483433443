@@ -68,9 +68,9 @@ export const AuthProvider = ({ children }) => {
               email: user.email,
               displayName: data.displayName || user.displayName || 'مستخدم المنظومة',
               role: data.role || (user.email === 'admin@hopelink.dz' ? 'super_admin' : 'branch_member'),
-              orgId: data.orgId || 'org-crescent-dz',
-              orgName: data.orgName || 'الهلال الأحمر الجزائري',
-              branchId: data.branchId || 'branch-cra-algiers',
+              orgId: data.orgId || '',
+              orgName: data.orgName || 'الجمعية',
+              branchId: data.branchId || '',
               branchName: data.branchName || 'الفرع الميداني',
               city: data.city || data.wilaya || 'الجزائر',
               phone: data.phone || '',
@@ -86,12 +86,12 @@ export const AuthProvider = ({ children }) => {
               email: user.email,
               displayName: isAdmin ? 'المشرف العام (Admin)' : (user.displayName || 'منسق الفرع'),
               role: isAdmin ? 'super_admin' : 'branch_member',
-              orgId: 'org-crescent-dz',
-              orgName: 'الهلال الأحمر الجزائري',
-              branchId: isAdmin ? 'branch-hq' : 'branch-cra-blida',
-              branchName: isAdmin ? 'الإدارة العامة والمقر الوطني' : 'فرع ولاية البليدة',
+              orgId: 'org-main',
+              orgName: 'الجمعية الإنسانية',
+              branchId: isAdmin ? 'branch-hq' : 'branch-1',
+              branchName: isAdmin ? 'المقر العام' : 'الفرع الميداني',
               city: 'الجزائر العاصمة',
-              phone: '0550 12 34 56',
+              phone: '0550 00 00 00',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
               isProfileComplete: true
@@ -108,10 +108,6 @@ export const AuthProvider = ({ children }) => {
             email: user.email,
             displayName: user.displayName || 'مستخدم',
             role: user.email === 'admin@hopelink.dz' ? 'super_admin' : 'branch_member',
-            orgId: 'org-crescent-dz',
-            orgName: 'الهلال الأحمر الجزائري',
-            branchId: 'branch-cra-algiers',
-            branchName: 'الفرع الميداني',
             isProfileComplete: true
           });
         }
@@ -125,21 +121,32 @@ export const AuthProvider = ({ children }) => {
     return () => unsubscribe();
   }, []);
 
-  // Standard Email & Password Login
+  // Standard Email & Password Login (Supports both Username and real Email)
   const loginWithEmail = async (identifier, password) => {
     setAuthError(null);
-    let email = identifier.trim().toLowerCase();
+    let rawInput = identifier.trim().toLowerCase();
+    let emailToAuth = rawInput;
 
-    // Support typing 'admin' as shortcut
-    if (email === 'admin') {
-      email = 'admin@hopelink.dz';
-    } else if (!email.includes('@')) {
-      email = `${email}@hopelink.dz`;
+    if (rawInput === 'admin') {
+      emailToAuth = 'admin@hopelink.dz';
+    } else if (!rawInput.includes('@')) {
+      // Lookup username in Firestore users collection
+      try {
+        const uQuery = query(collection(db, 'users'), where('loginUsername', '==', rawInput));
+        const uSnap = await getDocs(uQuery);
+        if (!uSnap.empty) {
+          emailToAuth = uSnap.docs[0].data().email;
+        } else {
+          emailToAuth = `${rawInput}@hopelink.dz`;
+        }
+      } catch (e) {
+        emailToAuth = `${rawInput}@hopelink.dz`;
+      }
     }
 
     try {
       // 1. Try standard sign-in
-      const res = await signInWithEmailAndPassword(auth, email, password);
+      const res = await signInWithEmailAndPassword(auth, emailToAuth, password);
       return { user: res.user, success: true };
     } catch (err) {
       console.warn("Sign-in attempt:", err.code);
@@ -147,10 +154,10 @@ export const AuthProvider = ({ children }) => {
       // If user-not-found, and it's the admin bootstrap account, auto-create it
       if (
         (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') &&
-        (email === 'admin@hopelink.dz' || email.startsWith('admin@'))
+        (emailToAuth === 'admin@hopelink.dz' || emailToAuth.startsWith('admin@'))
       ) {
         try {
-          const createRes = await createUserWithEmailAndPassword(auth, email, password);
+          const createRes = await createUserWithEmailAndPassword(auth, emailToAuth, password);
           const adminUser = createRes.user;
 
           const adminProfile = {
@@ -158,8 +165,8 @@ export const AuthProvider = ({ children }) => {
             email: adminUser.email,
             displayName: 'المشرف العام (Admin)',
             role: 'super_admin',
-            orgId: 'org-crescent-dz',
-            orgName: 'الهلال الأحمر الجزائري',
+            orgId: 'org-hq',
+            orgName: 'الإدارة العامة',
             branchId: 'branch-hq',
             branchName: 'المقر العام للتنسيق',
             city: 'الجزائر العاصمة',
@@ -172,7 +179,6 @@ export const AuthProvider = ({ children }) => {
           setUserProfile(adminProfile);
           return { user: adminUser, profile: adminProfile, success: true };
         } catch (createErr) {
-          // If creation fails due to email already in use, it was just wrong password
           if (createErr.code === 'auth/email-already-in-use') {
             throw new Error('كلمة المرور غير صحيحة. يرجى التأكد من كلمة المرور.');
           }
@@ -183,19 +189,21 @@ export const AuthProvider = ({ children }) => {
       if (err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         throw new Error('كلمة المرور غير صحيحة.');
       } else if (err.code === 'auth/user-not-found') {
-        throw new Error('هذا الحساب غير مسجل. يرجى طلب إنشاء حساب من المشرف.');
+        throw new Error('هذا الحساب غير مسجل. يرجى مراجعة المشرف العام.');
       } else if (err.code === 'auth/invalid-email') {
-        throw new Error('صيغة البريد الإلكتروني غير صحيحة.');
+        throw new Error('صيغة البريد الإلكتروني أو اسم المستخدم غير صحيحة.');
       }
       throw err;
     }
   };
 
   // Register a new staff user by Admin without logging the admin out
-  const createNewStaffAccount = async ({ email, password, displayName, role, orgId, orgName, branchId, branchName, phone }) => {
-    let cleanEmail = email.trim().toLowerCase();
-    if (!cleanEmail.includes('@')) {
-      cleanEmail = `${cleanEmail}@hopelink.dz`;
+  const createNewStaffAccount = async ({ email, username, password, displayName, role, orgId, orgName, branchId, branchName, phone }) => {
+    let cleanEmail = (email && email.trim()) ? email.trim().toLowerCase() : '';
+    const cleanUsername = (username && username.trim()) ? username.trim().toLowerCase() : '';
+
+    if (!cleanEmail) {
+      cleanEmail = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername || 'user' + Date.now()}@hopelink.dz`;
     }
 
     const secondaryAuth = getSecondaryAuth();
@@ -205,12 +213,13 @@ export const AuthProvider = ({ children }) => {
     const newProfile = {
       uid: newUid,
       email: cleanEmail,
+      loginUsername: cleanUsername || cleanEmail.split('@')[0],
       displayName: displayName || 'منسق فرع',
       role: role || 'branch_member',
-      orgId: orgId || 'org-crescent-dz',
-      orgName: orgName || 'الهلال الأحمر الجزائري',
-      branchId: branchId || 'branch-cra-blida',
-      branchName: branchName || 'فرع ولاية البليدة',
+      orgId: orgId || '',
+      orgName: orgName || 'الجمعية',
+      branchId: branchId || '',
+      branchName: branchName || 'الفرع الميداني',
       phone: phone || '',
       createdAt: new Date().toISOString(),
       isProfileComplete: true
@@ -247,8 +256,8 @@ export const AuthProvider = ({ children }) => {
     createNewStaffAccount,
     logout,
     role: userProfile?.role || (isSuperAdmin ? 'super_admin' : 'branch_member'),
-    currentOrgId: userProfile?.orgId || 'org-crescent-dz',
-    currentBranchId: userProfile?.branchId || 'branch-cra-algiers'
+    currentOrgId: userProfile?.orgId || null,
+    currentBranchId: userProfile?.branchId || null
   };
 
   return (

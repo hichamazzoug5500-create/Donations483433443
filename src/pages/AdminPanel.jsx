@@ -6,6 +6,7 @@ import {
   Plus, 
   Trash2, 
   KeyRound,
+  Mail,
   User,
   Layers,
   CheckCircle,
@@ -45,6 +46,7 @@ export default function AdminPanel() {
     wilaya: 'البليدة',
     address: '',
     phone: '',
+    email: '',
     username: '',
     password: ''
   });
@@ -84,11 +86,11 @@ export default function AdminPanel() {
     }
   };
 
-  // 2. Create Branch + Create its Login Credentials
+  // 2. Create Branch + Create its Login Credentials (with optional Email)
   const handleCreateBranch = async (e) => {
     e.preventDefault();
     if (!branchForm.name.trim() || !branchForm.orgId || !branchForm.username.trim() || !branchForm.password) {
-      alert(isRtl ? 'يرجى ملء جميع الحقول بما في ذلك اسم المستخدم وكلمة المرور' : 'Please fill all fields including username and password');
+      alert(isRtl ? 'يرجى ملء جميع الحقول بما في ذلك اسم المستخدم وكلمة المرور' : 'Please fill all required fields');
       return;
     }
 
@@ -96,7 +98,7 @@ export default function AdminPanel() {
     try {
       const selectedOrg = organizations.find(o => o.id === branchForm.orgId);
       const cleanUsername = branchForm.username.trim().toLowerCase();
-      const loginEmail = cleanUsername.includes('@') ? cleanUsername : `${cleanUsername}@hopelink.dz`;
+      const cleanEmail = branchForm.email ? branchForm.email.trim().toLowerCase() : '';
 
       // 1. Create Branch record in Firestore
       const branchId = await createBranch({
@@ -106,12 +108,14 @@ export default function AdminPanel() {
         wilaya: branchForm.wilaya,
         address: branchForm.address,
         phone: branchForm.phone,
+        email: cleanEmail,
         loginUsername: cleanUsername
       });
 
       // 2. Create Login Account in Firebase Auth & Firestore Users
       await createNewStaffAccount({
-        email: loginEmail,
+        email: cleanEmail,
+        username: cleanUsername,
         password: branchForm.password,
         displayName: branchForm.name,
         role: 'branch_member',
@@ -126,6 +130,7 @@ export default function AdminPanel() {
         branchName: branchForm.name,
         orgName: selectedOrg?.name,
         username: cleanUsername,
+        email: cleanEmail,
         password: branchForm.password
       });
 
@@ -136,6 +141,7 @@ export default function AdminPanel() {
         wilaya: 'البليدة',
         address: '',
         phone: '',
+        email: '',
         username: '',
         password: ''
       });
@@ -243,7 +249,10 @@ export default function AdminPanel() {
             {isRtl ? 'يمكن لمنسق الفرع تسجيل الدخول عبر البيانات التالية:' : 'The branch coordinator can sign in using:'}
           </p>
           <div className="p-2.5 bg-white rounded-xl border border-emerald-200 text-xs font-mono flex flex-wrap gap-4 text-slate-800">
-            <span>👤 <strong>{isRtl ? 'اسم المستخدم:' : 'Username:'}</strong> {createdBranchInfo.username}</span>
+            <span>👤 <strong>{isRtl ? 'اسم المستخدم للدخول:' : 'Username:'}</strong> {createdBranchInfo.username}</span>
+            {createdBranchInfo.email && (
+              <span>✉️ <strong>{isRtl ? 'البريد:' : 'Email:'}</strong> {createdBranchInfo.email}</span>
+            )}
             <span>🔑 <strong>{isRtl ? 'كلمة المرور:' : 'Password:'}</strong> {createdBranchInfo.password}</span>
           </div>
         </div>
@@ -330,7 +339,7 @@ export default function AdminPanel() {
                 {isRtl ? 'فروع الجمعيات وحسابات الدخول' : 'Branch Locations & Logins'}
               </h2>
               <p className="text-xs text-slate-500">
-                {isRtl ? 'عند إنشاء فرع، قم بتحديد اسم المستخدم وكلمة المرور لتسليمها لمنسق الفرع.' : 'Assign a username and password to each branch.'}
+                {isRtl ? 'عند إنشاء فرع، يمكنك إدخال بريد الفرع إن وجد وتعيين اسم المستخدم وكلمة المرور.' : 'Set branch details, optional email, and login credentials.'}
               </p>
             </div>
 
@@ -388,6 +397,7 @@ export default function AdminPanel() {
                   <div className="text-xs text-slate-500 space-y-0.5">
                     <p>📍 {branch.wilaya} {branch.address ? `— ${branch.address}` : ''}</p>
                     {branch.phone && <p>📞 {branch.phone}</p>}
+                    {branch.email && <p className="text-emerald-800 font-mono">✉️ {branch.email}</p>}
                   </div>
 
                   {branch.loginUsername && (
@@ -419,7 +429,7 @@ export default function AdminPanel() {
                 <div key={n.id} className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-between text-xs">
                   <div>
                     <span className="font-bold text-slate-900 block">{n.title || n.needDescription}</span>
-                    <span className="text-slate-500">{n.branchName} • {n.location?.city || n.location?.wilaya}</span>
+                    <span className="text-slate-500">{n.orgName} • {n.branchName} • {n.location?.city || n.location?.wilaya}</span>
                   </div>
                   <button
                     onClick={() => {
@@ -537,7 +547,7 @@ export default function AdminPanel() {
                   <select
                     value={branchForm.wilaya}
                     onChange={e => setBranchForm({ ...branchForm, wilaya: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs bg-white"
                   >
                     {ALGERIA_WILAYAS.map(w => (
                       <option key={w.code} value={w.nameAr}>{w.nameAr}</option>
@@ -552,7 +562,24 @@ export default function AdminPanel() {
                     placeholder="0550 12 34 56"
                     value={branchForm.phone}
                     onChange={e => setBranchForm({ ...branchForm, phone: e.target.value })}
-                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs dir-ltr"
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-300 text-xs dir-ltr"
+                  />
+                </div>
+              </div>
+
+              {/* Official Email (Optional) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  {isRtl ? 'البريد الإلكتروني الرسمي للفرع (اختياري / إن وجد)' : 'Official Branch Email (Optional)'}
+                </label>
+                <div className="relative">
+                  <Mail className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 rtl:right-3 rtl:left-auto pointer-events-none" />
+                  <input
+                    type="email"
+                    placeholder="blida.cra@gmail.com"
+                    value={branchForm.email}
+                    onChange={e => setBranchForm({ ...branchForm, email: e.target.value })}
+                    className="w-full pl-9 pr-3 rtl:pr-9 rtl:pl-3 py-2 rounded-xl border border-slate-300 text-xs dir-ltr"
                   />
                 </div>
               </div>
